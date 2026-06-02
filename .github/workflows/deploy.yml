@@ -70,38 +70,26 @@ jobs:
 
   deploy:
     needs: build-and-push-docker
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Copy docker-compose.prod.yml to Server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "docker-compose.prod.yml"
-          target: "~/sanctum/"
+      - name: Copy Files to Deployment Directory
+        run: |
+          mkdir -p ~/sanctum
+          cp docker-compose.prod.yml ~/sanctum/
+          cp deploy.sh ~/sanctum/
+          chmod +x ~/sanctum/deploy.sh
 
-      - name: Deploy to Remote Server via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            mkdir -p ~/sanctum
-            cd ~/sanctum
-            
-            # Log in to GHCR to pull packages
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            
-            # Pull backend image
-            docker compose -f docker-compose.prod.yml pull backend
-            
-            # Restart modified services
-            docker compose -f docker-compose.prod.yml up -d
-            
-            # Clean up old unused images
-            docker image prune -af
+      - name: Deploy Containers on Server
+        run: |
+          cd ~/sanctum
+          # Log in to GHCR to pull packages
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          # Pull backend image
+          docker compose -f docker-compose.prod.yml pull backend
+          # Restart services
+          docker compose -f docker-compose.prod.yml up -d
+          # Clean up old images
+          docker image prune -af
