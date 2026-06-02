@@ -49,25 +49,25 @@
 }
 
 .dark {
-  --background: #1a1a1a; /* Solid charcoal background matching target app */
+  --background: #121212; /* Dark workspace background */
   --foreground: #ffffff;
-  --card: #242426; /* Apple System Gray 6 dark background */
+  --card: #191919; /* Sidebar background */
   --card-foreground: #ffffff;
-  --popover: #242426;
+  --popover: #1f1f1f;
   --popover-foreground: #ffffff;
   --primary: #0a84ff; /* Apple System Blue dark */
   --primary-foreground: #ffffff;
-  --secondary: #2c2c2e;
+  --secondary: #262626; /* Hover highlight background */
   --secondary-foreground: #ffffff;
-  --muted: #2c2c2e;
-  --muted-foreground: #8e8e93;
+  --muted: #1f1f1f;
+  --muted-foreground: #a3a3a3; /* Muted texts */
   --accent: #0a84ff;
   --accent-foreground: #ffffff;
   --destructive: #ff453a;
   --destructive-foreground: #ffffff;
-  --border: #2c2c2e; /* Dark theme dividers */
-  --input: #2c2c2e;
-  --input-background: #1a1a1a;
+  --border: #262626; /* Dark theme borders */
+  --input: #1f1f1f;
+  --input-background: #121212;
   --ring: #0a84ff;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
@@ -549,4 +549,21 @@ button:active,
 
 .dark .prose tr:nth-child(even) {
   background: rgba(255,255,255,0.02);
+}
+
+/* Cherry Blossom (Sakura) Preset Gradients and Cards */
+.theme-sakura-bg {
+  background: linear-gradient(135deg, #ffd1dc 0%, #ff8da1 100%);
+}
+.dark .theme-sakura-bg {
+  background: linear-gradient(135deg, #3a2226 0%, #7d3c47 100%);
+}
+
+.sakura-card {
+  border-color: rgba(255, 141, 161, 0.2) !important;
+}
+
+.dark .sakura-card {
+  border-color: rgba(255, 141, 161, 0.1) !important;
+  background: rgba(26, 20, 21, 0.6) !important;
 }

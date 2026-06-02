@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-type Theme = 'indigo' | 'emerald' | 'rose' | 'amber' | 'cyan' | 'purple';
+type Theme = 'indigo' | 'emerald' | 'rose' | 'amber' | 'cyan' | 'purple' | 'sakura';
 type Mode = 'light' | 'dark';
 
 interface ThemeContextType {
@@ -43,6 +43,11 @@ const themes = {
     primary: '#a855f7',
     primaryLight: '#c084fc',
     primaryDark: '#9333ea',
+  },
+  sakura: {
+    primary: '#ff8da1',
+    primaryLight: '#ffb7c5',
+    primaryDark: '#e56f84',
   },
 };
 

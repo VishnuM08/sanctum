@@ -6,6 +6,7 @@ const themes = [
   { id: 'indigo', name: 'Indigo', color: '#6366f1' },
   { id: 'emerald', name: 'Emerald', color: '#10b981' },
   { id: 'rose', name: 'Rose', color: '#f43f5e' },
+  { id: 'sakura', name: 'Sakura (Pink)', color: '#ff8da1' },
   { id: 'amber', name: 'Amber', color: '#f59e0b' },
   { id: 'cyan', name: 'Cyan', color: '#06b6d4' },
   { id: 'purple', name: 'Purple', color: '#a855f7' },
