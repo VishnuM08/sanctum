@@ -68,6 +68,26 @@ services:
       ollama:
         condition: service_started
 
+  frontend:
+    image: ghcr.io/vishnum08/sanctum-frontend:latest
+    container_name: vault_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: vault_tunnel
+    restart: always
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+    depends_on:
+      - frontend
+      - backend
+
 volumes:
   postgres_data:
   redis_data:

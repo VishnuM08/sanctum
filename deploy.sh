@@ -43,15 +43,27 @@ DB_PASSWORD=$(openssl rand -hex 16)
 # Security Credentials
 JWT_SECRET=$(openssl rand -hex 32)
 VAULT_ENCRYPTION_KEY=$(openssl rand -hex 16)
+
+# Cloudflare Tunnel
+TUNNEL_TOKEN=${TUNNEL_TOKEN:-}
 EOT
   echo "✔ Created secure configuration (.env) with random credentials. Please review this file."
 else
   echo "✔ Configuration file (.env) already exists. Skipping recreation."
 fi
 
+# Ensure TUNNEL_TOKEN is updated if passed from environment
+if [ ! -z "$TUNNEL_TOKEN" ]; then
+  # Remove existing TUNNEL_TOKEN line if any
+  sed -i '/TUNNEL_TOKEN/d' .env 2>/dev/null || true
+  echo "TUNNEL_TOKEN=$TUNNEL_TOKEN" >> .env
+  echo "✔ Updated TUNNEL_TOKEN in config file."
+fi
+
 # 4. Pull and Start Services
 if [ -f docker-compose.prod.yml ]; then
   echo "[4/4] Starting services..."
+  docker compose -f docker-compose.prod.yml pull
   docker compose -f docker-compose.prod.yml up -d
   echo "=== Sanctum services successfully started! ==="
   echo "Spring Boot Server running at: http://localhost:8080"

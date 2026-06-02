@@ -1,17 +1,14 @@
-name: Deploy Sanctum Backend
+name: Deploy Sanctum App
 
 on:
   push:
     branches:
       - main
-    paths:
-      - 'vault-backend/**'
-      - 'docker-compose.prod.yml'
-      - '.github/workflows/deploy.yml'
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/sanctum-backend
+  IMAGE_NAME_FRONTEND: ${{ github.repository_owner }}/sanctum-frontend
 
 jobs:
   build-and-test:
@@ -68,8 +65,43 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+  build-and-push-frontend-docker:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short
+
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
   deploy:
-    needs: build-and-push-docker
+    needs: [build-and-push-docker, build-and-push-frontend-docker]
     runs-on: self-hosted
     steps:
       - name: Checkout Code
@@ -83,13 +115,16 @@ jobs:
           chmod +x ~/sanctum/deploy.sh
 
       - name: Deploy Containers on Server
+        env:
+          TUNNEL_TOKEN: ${{ secrets.TUNNEL_TOKEN }}
         run: |
           cd ~/sanctum
           # Log in to GHCR to pull packages
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          # Pull backend image
-          docker compose -f docker-compose.prod.yml pull backend
-          # Restart services
-          docker compose -f docker-compose.prod.yml up -d
+          
+          # Inject TUNNEL_TOKEN into environment for deploy.sh script execution
+          export TUNNEL_TOKEN="${{ secrets.TUNNEL_TOKEN }}"
+          ./deploy.sh
+          
           # Clean up old images
           docker image prune -af
