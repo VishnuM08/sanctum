@@ -22,6 +22,7 @@ export function Settings({ onLogout }: SettingsProps) {
   const { mode, toggleMode } = useTheme();
   const [showClearConfirm, setShowClearConfirm] = useReactState(false);
   const [apiUrl, setApiUrl] = useReactState(() => api.getApiBase());
+  const [settingsGoogleId, setSettingsGoogleId] = useReactState(() => localStorage.getItem('vault-google-client-id') || '');
   const [settings, setSettings] = useLocalStorage<SettingsType>('settings', {
     notifications: {
       morningDigest: true,
@@ -233,7 +234,7 @@ export function Settings({ onLogout }: SettingsProps) {
           </div>
           <h3 className="font-semibold">Network & Server</h3>
         </div>
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground block">Cloud Server API Endpoint</label>
             <div className="flex gap-2">
@@ -255,6 +256,32 @@ export function Settings({ onLogout }: SettingsProps) {
             </div>
             <p className="text-[10px] text-muted-foreground">
               Configure the remote server API base. Useful when running Sanctum from an Android APK device connecting to a host machine (e.g. <code>http://192.168.x.x:8080/api</code>).
+            </p>
+          </div>
+
+          <div className="space-y-2 pt-4 border-t border-border">
+            <label className="text-sm font-medium text-foreground block">Google OAuth Client ID</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={settingsGoogleId}
+                onChange={(e) => setSettingsGoogleId(e.target.value)}
+                placeholder="1008719970978-...apps.googleusercontent.com"
+                className="flex-1 px-4 py-2.5 rounded-xl border-2 border-border bg-input-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+              />
+              <Button size="sm" onClick={() => {
+                const val = settingsGoogleId.trim();
+                if (val) {
+                  localStorage.setItem('vault-google-client-id', val);
+                  toast.success('Google Client ID updated successfully');
+                } else {
+                  localStorage.removeItem('vault-google-client-id');
+                  toast.success('Google Client ID reset to default');
+                }
+              }}>Save Client ID</Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              Paste your custom Google Client ID. Make sure your domain (e.g. <code>https://sanctum.theaignite.app</code>) is added to the <strong>Authorized JavaScript origins</strong> in Google Cloud Console.
             </p>
           </div>
         </div>

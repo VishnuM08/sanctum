@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-import { Shield, Sparkles, Lock, Mail, User as UserIcon, WifiOff } from 'lucide-react';
+import { Shield, Sparkles, Lock, Mail, User as UserIcon, WifiOff, Settings as SettingsIcon } from 'lucide-react';
 import { api } from '../utils/api';
 import { toast } from 'sonner';
 import sanctumLogo from '../../assets/sanctum_logo.png';
@@ -19,6 +19,10 @@ export function Auth({ onAuthSuccess }: AuthProps) {
     email: '',
     password: '',
   });
+
+  const [googleClientId, setGoogleClientId] = useState(() => localStorage.getItem('vault-google-client-id') || '1008719970978-hb24n2dstb40o45ocbeuoeb077a24m2d.apps.googleusercontent.com');
+  const [showGoogleConfig, setShowGoogleConfig] = useState(false);
+  const [customClientIdInput, setCustomClientIdInput] = useState(() => localStorage.getItem('vault-google-client-id') || '');
 
   const handleGoogleLogin = async (response: any) => {
     setLoading(true);
@@ -55,12 +59,13 @@ export function Auth({ onAuthSuccess }: AuthProps) {
       if (typeof window !== 'undefined' && (window as any).google) {
         try {
           (window as any).google.accounts.id.initialize({
-            client_id: '1008719970978-hb24n2dstb40o45ocbeuoeb077a24m2d.apps.googleusercontent.com',
+            client_id: googleClientId,
             callback: handleGoogleLogin,
           });
 
           const btnEl = document.getElementById('googleBtn');
           if (btnEl) {
+            btnEl.innerHTML = ''; // Clear previous button to avoid rendering duplicates
             (window as any).google.accounts.id.renderButton(
               btnEl,
               { theme: 'outline', size: 'large', width: 380 }
@@ -91,7 +96,7 @@ export function Auth({ onAuthSuccess }: AuthProps) {
     return () => {
       if (checkInterval) clearInterval(checkInterval);
     };
-  }, []);
+  }, [googleClientId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,10 +206,80 @@ export function Auth({ onAuthSuccess }: AuthProps) {
 
         {isLogin && (
           <>
-            <div className="relative my-5 flex items-center justify-center">
-              <span className="absolute px-3 bg-[#ffffff] dark:bg-[#242426] text-[10px] uppercase font-bold tracking-wider text-muted-foreground">or connect via</span>
+            <div className="relative my-5 flex items-center justify-center group">
+              <div className="absolute px-3 bg-[#ffffff] dark:bg-[#242426] text-[10px] uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-1.5 z-10">
+                <span>or connect via</span>
+                <button
+                  type="button"
+                  onClick={() => setShowGoogleConfig(!showGoogleConfig)}
+                  className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                  title="Configure Google OAuth Client ID"
+                >
+                  <SettingsIcon className="w-3.5 h-3.5" />
+                </button>
+              </div>
               <div className="w-full border-t border-border" />
             </div>
+
+            {showGoogleConfig && (
+              <div className="p-4 rounded-xl border border-border/80 bg-secondary/30 text-left mb-4 space-y-3 animate-in slide-in-up duration-200">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-foreground">Google OAuth Client ID</span>
+                  <button 
+                    type="button"
+                    onClick={() => setShowGoogleConfig(false)}
+                    className="text-[10px] text-muted-foreground hover:text-foreground cursor-pointer font-medium"
+                  >
+                    Close
+                  </button>
+                </div>
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  To use Google Sign-In on your custom domain, enter your Google OAuth Client ID. Make sure <code>https://sanctum.theaignite.app</code> is authorized under JavaScript origins in Google Console.
+                </p>
+                <input
+                  type="text"
+                  placeholder="Paste Google Client ID here..."
+                  value={customClientIdInput}
+                  onChange={(e) => setCustomClientIdInput(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-background text-xs border border-border focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-foreground"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="xs"
+                    onClick={() => {
+                      const val = customClientIdInput.trim();
+                      if (val) {
+                        localStorage.setItem('vault-google-client-id', val);
+                        setGoogleClientId(val);
+                        toast.success('Custom Google Client ID saved!');
+                      } else {
+                        localStorage.removeItem('vault-google-client-id');
+                        setGoogleClientId('1008719970978-hb24n2dstb40o45ocbeuoeb077a24m2d.apps.googleusercontent.com');
+                        toast.success('Reset to default Google Client ID');
+                      }
+                      setShowGoogleConfig(false);
+                    }}
+                  >
+                    Save ID
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    onClick={() => {
+                      setCustomClientIdInput('');
+                      localStorage.removeItem('vault-google-client-id');
+                      setGoogleClientId('1008719970978-hb24n2dstb40o45ocbeuoeb077a24m2d.apps.googleusercontent.com');
+                      toast.success('Reset to default client ID');
+                      setShowGoogleConfig(false);
+                    }}
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="flex flex-col gap-3">
               <div id="googleBtn" className="w-full flex justify-center h-10 overflow-hidden rounded-xl" />

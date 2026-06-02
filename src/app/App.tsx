@@ -252,6 +252,17 @@ function AppContent() {
         {renderPage()}
       </main>
 
+      {/* Floating AI Agent Shortcut (Mobile Only) */}
+      {currentPage !== 'agent' && (
+        <button
+          onClick={() => setCurrentPage('agent')}
+          className="lg:hidden fixed bottom-20 right-4 z-40 p-4 rounded-full bg-gradient-to-r from-primary to-purple-600 text-white shadow-lg shadow-primary/30 hover:scale-105 active:scale-95 transition-all animate-in zoom-in cursor-pointer"
+          title="Ask AI Agent"
+        >
+          <Sparkles className="w-5 h-5 text-white" />
+        </button>
+      )}
+
       <MobileNav currentPage={currentPage} onNavigate={setCurrentPage} />
 
       {/* Global Command Spotlight Overlay */}
