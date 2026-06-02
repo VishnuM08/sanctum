@@ -1,8 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Card } from '../components/Card';
-import { GradientCard } from '../components/GradientCard';
-import { Badge } from '../components/Badge';
-import { Button } from '../components/Button';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { Note, VaultEntry, Reminder } from '../types';
 import { FileText, Lock, Bell, Sparkles, TrendingUp, Clock, ArrowRight, RefreshCw, Activity } from 'lucide-react';
@@ -12,7 +8,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-card/90 backdrop-blur-xl border border-border/80 p-3 rounded-xl shadow-xl text-xs font-semibold space-y-1.5">
+      <div className="bg-card border border-border p-3 rounded shadow text-xs font-medium space-y-1.5">
         <p className="text-muted-foreground mb-1 font-bold">{label} Activity</p>
         {payload.map((item: any) => (
           <div key={item.name} className="flex items-center justify-between gap-4">
@@ -90,10 +86,10 @@ export function Dashboard() {
   })();
 
   const stats = [
-    { label: 'Total Notes', value: notes.length.toString(), icon: FileText, color: 'text-blue-500' },
-    { label: 'Vault Items', value: vault.length.toString(), icon: Lock, color: 'text-purple-500' },
-    { label: 'Active Reminders', value: activeReminders.length.toString(), icon: Bell, color: 'text-orange-500' },
-    { label: 'AI Actions', value: aiGeneratedCount.toString(), icon: Sparkles, color: 'text-green-500' },
+    { label: 'Total Notes', value: notes.length.toString(), icon: FileText },
+    { label: 'Vault Items', value: vault.length.toString(), icon: Lock },
+    { label: 'Active Reminders', value: activeReminders.length.toString(), icon: Bell },
+    { label: 'AI Actions', value: aiGeneratedCount.toString(), icon: Sparkles },
   ];
 
   const recentActivity = [
@@ -140,7 +136,7 @@ export function Dashboard() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold text-foreground">
             Welcome back!
           </h1>
           {loading && <RefreshCw className="w-5 h-5 text-primary animate-spin" />}
@@ -153,34 +149,31 @@ export function Dashboard() {
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <Card
+            <div
               key={stat.label}
-              hover
-              className="flex flex-col"
+              className="flex flex-col p-6 rounded border border-border bg-card hover:border-muted-foreground/30 transition-all duration-200"
               style={{ animationDelay: `${index * 100}ms` }}
             >
-              <div className="flex items-center justify-between mb-3">
-                <div className={`p-2.5 rounded-xl ${stat.color.replace('text-', 'bg-')}/10`}>
-                  <Icon className={`w-5 h-5 ${stat.color}`} />
-                </div>
+              <div className="flex items-center justify-between mb-3 text-muted-foreground">
+                <Icon className="w-5 h-5" />
               </div>
-              <p className="text-3xl font-bold mb-1">{stat.value}</p>
-              <span className="text-sm text-muted-foreground">{stat.label}</span>
-            </Card>
+              <p className="text-3xl font-bold mb-1 text-foreground">{stat.value}</p>
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{stat.label}</span>
+            </div>
           );
         })}
       </div>
 
       {/* 7-Day Activity Heatmap/Graph */}
-      <Card className="flex flex-col animate-in fade-in duration-500">
+      <div className="flex flex-col p-6 rounded border border-border bg-card animate-in fade-in duration-500">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-primary/10">
-              <Activity className="w-5 h-5 text-primary" />
+            <div className="p-2 rounded bg-secondary flex items-center justify-center">
+              <Activity className="w-5 h-5 text-muted-foreground" />
             </div>
             <div>
-              <h3 className="font-semibold text-base leading-none">Vault Activity</h3>
-              <p className="text-xs text-muted-foreground mt-1">7-day view of notes, reminders, and credentials</p>
+              <h3 className="font-semibold text-base leading-none text-foreground">Vault Activity</h3>
+              <p className="text-xs text-muted-foreground mt-1.5">7-day view of notes, reminders, and credentials</p>
             </div>
           </div>
         </div>
@@ -193,19 +186,19 @@ export function Dashboard() {
             >
               <defs>
                 <linearGradient id="colorNotes" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.25}/>
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="var(--foreground)" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="var(--foreground)" stopOpacity={0}/>
                 </linearGradient>
                 <linearGradient id="colorVault" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.25}/>
-                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="var(--muted-foreground)" stopOpacity={0.08}/>
+                  <stop offset="95%" stopColor="var(--muted-foreground)" stopOpacity={0}/>
                 </linearGradient>
                 <linearGradient id="colorReminders" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#ec4899" stopOpacity={0.25}/>
-                  <stop offset="95%" stopColor="#ec4899" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} vertical={false} />
               <XAxis 
                 dataKey="name" 
                 stroke="var(--muted-foreground)" 
@@ -233,41 +226,41 @@ export function Dashboard() {
               <Area 
                 type="monotone" 
                 dataKey="Notes" 
-                stroke="#6366f1" 
-                strokeWidth={2}
+                stroke="var(--foreground)" 
+                strokeWidth={1.5}
                 fillOpacity={1} 
                 fill="url(#colorNotes)" 
               />
               <Area 
                 type="monotone" 
                 dataKey="Vault" 
-                stroke="#8b5cf6" 
-                strokeWidth={2}
+                stroke="var(--muted-foreground)" 
+                strokeWidth={1.5}
                 fillOpacity={1} 
                 fill="url(#colorVault)" 
               />
               <Area 
                 type="monotone" 
                 dataKey="Reminders" 
-                stroke="#ec4899" 
-                strokeWidth={2}
+                stroke="var(--primary)" 
+                strokeWidth={1.5}
                 fillOpacity={1} 
                 fill="url(#colorReminders)" 
               />
             </AreaChart>
           </ResponsiveContainer>
         </div>
-      </Card>
+      </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Recent Activity */}
-        <Card>
+        <div className="p-6 rounded border border-border bg-card">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-xl bg-primary/10">
-                <TrendingUp className="w-5 h-5 text-primary" />
+              <div className="p-2 rounded bg-secondary flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-muted-foreground" />
               </div>
-              <h3 className="font-semibold">Recent Activity</h3>
+              <h3 className="font-semibold text-foreground">Recent Activity</h3>
             </div>
           </div>
 
@@ -279,16 +272,20 @@ export function Dashboard() {
           ) : (
             <div className="space-y-3">
               {recentActivity.map((activity, i) => (
-                <div key={i} className="flex items-start gap-3 p-3 rounded-xl hover:bg-accent/50 transition-colors cursor-pointer group">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                    {activity.type === 'note' && <FileText className="w-4 h-4 text-primary" />}
-                    {activity.type === 'vault' && <Lock className="w-4 h-4 text-primary" />}
-                    {activity.type === 'agent' && <Sparkles className="w-4 h-4 text-primary" />}
+                <div key={i} className="flex items-start gap-3 p-2.5 rounded hover:bg-accent/50 transition-colors cursor-pointer group">
+                  <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center flex-shrink-0 text-muted-foreground">
+                    {activity.type === 'note' && <FileText className="w-4 h-4" />}
+                    {activity.type === 'vault' && <Lock className="w-4 h-4" />}
+                    {activity.type === 'agent' && <Sparkles className="w-4 h-4" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <p className="text-sm font-medium truncate">{activity.title}</p>
-                      {activity.ai && <Badge variant="primary">AI</Badge>}
+                      <p className="text-sm font-medium truncate text-foreground">{activity.title}</p>
+                      {activity.ai && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-secondary text-secondary-foreground uppercase tracking-wider">
+                          AI
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground">{activity.time}</p>
                   </div>
@@ -297,16 +294,16 @@ export function Dashboard() {
               ))}
             </div>
           )}
-        </Card>
+        </div>
 
         {/* Upcoming Reminders */}
-        <Card>
+        <div className="p-6 rounded border border-border bg-card">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-xl bg-orange-500/10">
-                <Clock className="w-5 h-5 text-orange-500" />
+              <div className="p-2 rounded bg-secondary flex items-center justify-center">
+                <Clock className="w-5 h-5 text-muted-foreground" />
               </div>
-              <h3 className="font-semibold">Upcoming Reminders</h3>
+              <h3 className="font-semibold text-foreground">Upcoming Reminders</h3>
             </div>
           </div>
 
@@ -319,10 +316,10 @@ export function Dashboard() {
           ) : (
             <div className="space-y-3">
               {upcomingReminders.map((reminder, i) => (
-                <div key={i} className="flex items-start gap-3 p-3 rounded-xl hover:bg-accent/50 transition-colors cursor-pointer group">
-                  <div className="w-3 h-3 rounded-full mt-1.5 flex-shrink-0 bg-orange-500 shadow-lg shadow-orange-500/50" />
+                <div key={i} className="flex items-start gap-3 p-2.5 rounded hover:bg-accent/50 transition-colors cursor-pointer group">
+                  <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0 bg-muted-foreground" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate mb-1">{reminder.title}</p>
+                    <p className="text-sm font-medium truncate mb-1 text-foreground">{reminder.title}</p>
                     <p className="text-xs text-muted-foreground">
                       {reminder.remindAt.includes('T')
                         ? new Date(reminder.remindAt).toLocaleString()
@@ -334,39 +331,41 @@ export function Dashboard() {
               ))}
             </div>
           )}
-        </Card>
+        </div>
       </div>
 
       {/* AI Agent Insight */}
       {aiGeneratedCount > 0 && (
-        <GradientCard gradient="primary" className="border border-primary/20">
+        <div className="p-6 rounded border border-border bg-card relative z-10 animate-in fade-in duration-300">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center flex-shrink-0 shadow-xl shadow-primary/30 animate-in bounce-in">
-              <Sparkles className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-2">
-                <h4 className="font-semibold">AI Agent Working</h4>
-                <Badge variant="primary">Active</Badge>
+              <div className="flex items-center gap-2 mb-1.5">
+                <h4 className="font-semibold text-foreground">AI Agent Active</h4>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary uppercase tracking-wider">
+                  Active
+                </span>
               </div>
-              <p className="text-sm text-muted-foreground mb-4">
+              <p className="text-sm text-muted-foreground">
                 I've analyzed {notes.length} notes and extracted {reminders.filter(r => r.aiGenerated).length} reminders automatically.
                 {notes.filter(n => n.aiSummary).length > 0 && ` Generated ${notes.filter(n => n.aiSummary).length} AI summaries.`}
               </p>
             </div>
           </div>
-        </GradientCard>
+        </div>
       )}
 
       {/* Empty State */}
       {notes.length === 0 && vault.length === 0 && reminders.length === 0 && (
-        <GradientCard gradient="primary" className="border border-primary/20 text-center">
-          <Sparkles className="w-16 h-16 mx-auto mb-4 text-primary" />
-          <h3 className="font-semibold text-lg mb-2">Welcome to Personal Vault!</h3>
-          <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+        <div className="p-12 rounded border border-border bg-card text-center relative z-10 animate-in fade-in duration-300">
+          <Sparkles className="w-12 h-12 mx-auto mb-4 text-primary" />
+          <h3 className="font-semibold text-base mb-1.5 text-foreground">Welcome to Sanctum!</h3>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
             Start by creating your first note. The AI agent will automatically extract reminders, generate summaries, and suggest tags.
           </p>
-        </GradientCard>
+        </div>
       )}
     </div>
   );

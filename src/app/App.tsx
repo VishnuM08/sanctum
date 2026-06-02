@@ -93,15 +93,15 @@ const formatDate = (dateStr: string) => {
 };
 
 function AppContent() {
-  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [currentPage, setCurrentPage] = useState('notes');
   const [isOnline, setIsOnline] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showCommandMenu, setShowCommandMenu] = useState(false);
   const [hasUnsynced, setHasUnsynced] = useState(false);
 
-  // Notes state lifted up - initialized with preloaded template pages
-  const [notes, setNotes] = useLocalStorage<Note[]>('notes', initialNotesList);
+  // Notes state lifted up
+  const [notes, setNotes] = useLocalStorage<Note[]>('notes', []);
   const [selectedNoteId, setSelectedNoteId] = useLocalStorage<string | null>('notes-selected-id', null);
   const [collapsedNodes, setCollapsedNodes] = useLocalStorage<Record<string, boolean>>('notes-collapsed-nodes', {});
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -165,16 +165,6 @@ function AppContent() {
     }
   };
 
-  // Merge preloaded templates if they are missing
-  useEffect(() => {
-    const hasTemplates = notes.some(n => n.id.startsWith('init-'));
-    if (!hasTemplates) {
-      setNotes(prev => {
-        const filteredPrev = prev.filter(n => !n.id.startsWith('init-'));
-        return [...initialNotesList, ...filteredPrev];
-      });
-    }
-  }, [notes, setNotes]);
 
   useEffect(() => {
     checkConnection();

@@ -55,7 +55,7 @@ export function Auth({ onAuthSuccess }: AuthProps) {
             btnEl.innerHTML = ''; // Clear previous button to avoid rendering duplicates
             (window as any).google.accounts.id.renderButton(
               btnEl,
-              { theme: 'outline', size: 'large', width: 380 }
+              { theme: 'outline', size: 'large', width: 336 }
             );
           }
           return true;
@@ -118,90 +118,96 @@ export function Auth({ onAuthSuccess }: AuthProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background relative overflow-hidden">
-      {/* Animated Glimmers in Background */}
-      <div className="absolute top-0 -left-4 w-96 h-96 bg-primary rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob" />
-      <div className="absolute -bottom-8 right-10 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000" />
-
-      <Card className="w-full max-w-md p-8 border border-border/80 bg-card/60 backdrop-blur-xl relative z-10 shadow-2xl animate-in zoom-in duration-300">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background relative">
+      <div className="w-full max-w-[400px] p-8 border border-border bg-card rounded shadow-sm relative z-10 animate-in zoom-in duration-300">
         <div className="flex flex-col items-center text-center mb-8">
           <img 
             src={sanctumLogo} 
             alt="Sanctum Logo" 
-            className="w-16 h-16 rounded-2xl shadow-xl shadow-primary/20 object-cover mb-4 animate-in bounce-in" 
+            className="w-12 h-12 object-cover mb-4 select-none" 
           />
-          <h2 className="text-3xl font-extrabold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+          <h2 className="text-2xl font-bold text-foreground">
             Sanctum
           </h2>
-          <p className="text-sm text-muted-foreground mt-2">
-            {isLogin ? 'Securely access your notes & sensitive numbers' : 'Create your private encrypted vault'}
+          <p className="text-xs text-muted-foreground mt-2">
+            {isLogin ? 'Log in to your private workspace' : 'Create your private encrypted vault'}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
-            <div className="relative">
-              <UserIcon className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Full Name
+              </label>
               <input
                 type="text"
-                placeholder="Full Name"
+                placeholder="Enter your name..."
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full pl-12 pr-4 py-3 rounded-xl focus:outline-none text-sm glass-input"
+                className="w-full px-3 py-2 border border-border rounded bg-input-background focus:outline-none focus:border-primary text-sm transition-all"
                 required
               />
             </div>
           )}
 
-          <div className="relative">
-            <Mail className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Email Address
+            </label>
             <input
               type="email"
-              placeholder="Email Address"
+              placeholder="Enter your email..."
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full pl-12 pr-4 py-3 rounded-xl focus:outline-none text-sm glass-input"
+              className="w-full px-3 py-2 border border-border rounded bg-input-background focus:outline-none focus:border-primary text-sm transition-all"
               required
             />
           </div>
 
-          <div className="relative">
-            <Lock className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Password
+            </label>
             <input
               type="password"
-              placeholder="Password"
+              placeholder="Enter your password..."
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full pl-12 pr-4 py-3 rounded-xl focus:outline-none text-sm glass-input"
+              className="w-full px-3 py-2 border border-border rounded bg-input-background focus:outline-none focus:border-primary text-sm transition-all"
               required
             />
           </div>
 
-          <Button type="submit" className="w-full py-3.5 mt-2 shadow-lg shadow-primary/20" disabled={loading}>
+          <button 
+            type="submit" 
+            className="w-full py-2 px-4 mt-2 bg-foreground text-background hover:bg-foreground/90 font-medium rounded transition-all text-sm cursor-pointer flex items-center justify-center gap-2" 
+            disabled={loading}
+          >
             {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <>
+                <span className="h-4 w-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
                 Processing...
-              </span>
+              </>
             ) : isLogin ? (
               'Sign In'
             ) : (
               'Create Account'
             )}
-          </Button>
+          </button>
         </form>
 
         {isLogin && (
           <>
-            <div className="relative my-5 flex items-center justify-center">
-              <div className="absolute px-3 bg-[#ffffff] dark:bg-[#242426] text-[10px] uppercase font-bold tracking-wider text-muted-foreground z-10">
-                <span>or connect via</span>
+            <div className="relative my-6 flex items-center justify-center">
+              <div className="absolute px-3 bg-background text-[10px] uppercase font-bold tracking-wider text-muted-foreground z-10 select-none">
+                or connect via
               </div>
               <div className="w-full border-t border-border" />
             </div>
 
             <div className="flex flex-col gap-3">
-              <div id="googleBtn" className="w-full flex justify-center h-10 overflow-hidden rounded-xl" />
+              <div id="googleBtn" className="w-full flex justify-center h-10 overflow-hidden rounded" />
             </div>
           </>
         )}
@@ -209,12 +215,12 @@ export function Auth({ onAuthSuccess }: AuthProps) {
         <div className="flex flex-col gap-4 mt-6 pt-6 border-t border-border/60">
           <button
             onClick={() => setIsLogin(!isLogin)}
-            className="text-xs text-center text-primary font-semibold hover:underline cursor-pointer"
+            className="text-xs text-center text-muted-foreground hover:text-foreground font-medium hover:underline cursor-pointer"
           >
             {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
           </button>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }
