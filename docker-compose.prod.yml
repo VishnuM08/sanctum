@@ -72,8 +72,6 @@ services:
     image: ghcr.io/vishnum08/sanctum-frontend:latest
     container_name: vault_frontend
     restart: always
-    ports:
-      - "80:80"
     depends_on:
       - backend
 
