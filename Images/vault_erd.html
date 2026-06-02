@@ -1,0 +1,91 @@
+
+<div id="erd"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '13px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    lineColor: dark ? '#9c9a92' : '#73726c',
+    textColor: dark ? '#c2c0b6' : '#3d3d3a',
+  },
+});
+const { svg } = await mermaid.render('erd-svg', `erDiagram
+  USERS {
+    uuid id PK
+    string email
+    string password_hash
+    string name
+    timestamp created_at
+  }
+  NOTES {
+    uuid id PK
+    uuid user_id FK
+    string title
+    text content
+    text ai_summary
+    string[] tags
+    boolean archived
+    timestamp created_at
+    timestamp updated_at
+  }
+  VAULT_ENTRIES {
+    uuid id PK
+    uuid user_id FK
+    string label
+    string encrypted_value
+    string category
+    timestamp expires_at
+    timestamp created_at
+  }
+  REMINDERS {
+    uuid id PK
+    uuid user_id FK
+    uuid note_id FK
+    string title
+    text context
+    timestamp remind_at
+    boolean fired
+    boolean ai_generated
+    timestamp created_at
+  }
+  AGENT_LOGS {
+    uuid id PK
+    uuid user_id FK
+    string action
+    jsonb payload
+    timestamp created_at
+  }
+  USERS ||--o{ NOTES : "owns"
+  USERS ||--o{ VAULT_ENTRIES : "owns"
+  USERS ||--o{ REMINDERS : "receives"
+  NOTES ||--o{ REMINDERS : "spawns"
+  USERS ||--o{ AGENT_LOGS : "generates"
+`);
+document.getElementById('erd').innerHTML = svg;
+document.querySelectorAll('#erd svg .node').forEach(node => {
+  const firstPath = node.querySelector('path[d]');
+  if (!firstPath) return;
+  const d = firstPath.getAttribute('d');
+  const nums = d.match(/-?[\d.]+/g)?.map(Number);
+  if (!nums || nums.length < 8) return;
+  const xs = [nums[0], nums[2], nums[4], nums[6]];
+  const ys = [nums[1], nums[3], nums[5], nums[7]];
+  const x = Math.min(...xs), y = Math.min(...ys);
+  const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', x); rect.setAttribute('y', y);
+  rect.setAttribute('width', w); rect.setAttribute('height', h);
+  rect.setAttribute('rx', '8');
+  for (const a of ['fill', 'stroke', 'stroke-width', 'class', 'style']) {
+    if (firstPath.hasAttribute(a)) rect.setAttribute(a, firstPath.getAttribute(a));
+  }
+  firstPath.replaceWith(rect);
+});
+</script>

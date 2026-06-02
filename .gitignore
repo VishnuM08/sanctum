@@ -1,0 +1,36 @@
+# Frontend Dependencies
+node_modules/
+.pnpm-store/
+dist/
+
+# Env & Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Java Backend Build
+**/target/
+*.jar
+*.war
+
+# Android Build & Local Config
+android/.gradle/
+android/app/build/
+android/local.properties
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+
+# IDE / Editor Settings
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS Files
+.DS_Store
+Thumbs.db

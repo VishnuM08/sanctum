@@ -1,0 +1,47 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: vault-backend
+  
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/vault_db}
+    username: ${SPRING_DATASOURCE_USERNAME:vault_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:vault_pass}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate}
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: ${SPRING_FLYWAY_ENABLED:true}
+    baseline-on-migrate: true
+
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+
+jwt:
+  secret: ${JWT_SECRET:9f82d1c6e4b3a2f1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7}
+  expiration-ms: ${JWT_EXPIRATION_MS:86400000} # 24 hours
+
+vault:
+  encryption-key: ${VAULT_ENCRYPTION_KEY:my-secure-vault-encryption-key-aes}
+
+ollama:
+  host: ${OLLAMA_HOST:http://localhost:11434}
+  model: ${OLLAMA_MODEL:llama3.2}
+
+logging:
+  level:
+    root: INFO
+    com.vault: DEBUG
+    org.springframework.security: INFO
