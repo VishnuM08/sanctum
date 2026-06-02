@@ -1,6 +1,16 @@
 import { Note, VaultEntry, Reminder, AgentLog, Settings } from '../types';
 
-let API_BASE = localStorage.getItem('vault-api-server-url') || 'http://localhost:8080/api';
+const getDefaultApiBase = () => {
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname === 'sanctum.theaignite.app') {
+      return 'https://sanctum-api.theaignite.app/api';
+    }
+  }
+  return 'http://localhost:8080/api';
+};
+
+let API_BASE = localStorage.getItem('vault-api-server-url') || getDefaultApiBase();
 
 // Connection status cache
 let isServerOnline = false;
