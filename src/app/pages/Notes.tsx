@@ -1085,7 +1085,7 @@ export function Notes({
   const isPageEmpty = editorTitle === '' && blocks.length === 1 && blocks[0].content === '' && blocks[0].type === 'text';
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden relative w-full h-full bg-[#121212]">
+    <div className="flex-1 flex flex-col overflow-hidden relative w-full h-full bg-background">
       {/* Toggle Sidebar Button */}
       <button
         onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
@@ -1246,7 +1246,7 @@ export function Notes({
                     <div className={clsx(
                       "relative group/icon transition-all flex items-center select-none rounded-2xl",
                       activeNoteMetadata.cover 
-                        ? "-mt-12 bg-[#121212] border border-border/30 shadow-md p-2 w-20 h-20 text-5xl justify-center z-10 ml-2" 
+                        ? "-mt-12 bg-background border border-border/30 shadow-md p-2 w-20 h-20 text-5xl justify-center z-10 ml-2" 
                         : "w-16 h-16 text-5xl justify-start pl-2"
                     )}>
                       <span onClick={() => setShowIconPicker(!showIconPicker)} className="hover:scale-105 transition-transform block cursor-pointer">
