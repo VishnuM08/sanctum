@@ -7,13 +7,11 @@ set -e
 echo "=== Sanctum Server Deploy Tool ==="
 echo "=================================="
 
-# 1. Update OS package lists
-echo "[1/4] Updating package repositories..."
-sudo apt-get update -y
-
-# 2. Check and Install Docker if missing
+# 1 & 2. Check and Install Docker if missing
 if ! [ -x "$(command -v docker)" ]; then
-  echo "[2/4] Docker is not installed. Installing Docker CE..."
+  echo "[1/4] Docker is not installed. Updating package repositories..."
+  sudo apt-get update -y
+  echo "[2/4] Installing Docker CE..."
   sudo apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
   sudo mkdir -p /etc/apt/keyrings
   curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
@@ -24,7 +22,7 @@ if ! [ -x "$(command -v docker)" ]; then
   sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
   echo "✔ Docker CE and Compose plugin installed!"
 else
-  echo "[2/4] ✔ Docker is already installed."
+  echo "[1/4] ✔ Docker is already installed. Skipping installer and apt updates."
 fi
 
 # 3. Create app deployment structure and config files
