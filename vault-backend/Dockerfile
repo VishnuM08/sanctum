@@ -8,7 +8,7 @@ COPY src ./src
 RUN mvn package -DskipTests -B
 
 # --- Run Stage ---
-FROM openjdk:17-slim
+FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/vault-backend-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8080
