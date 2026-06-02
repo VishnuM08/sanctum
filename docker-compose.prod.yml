@@ -43,7 +43,7 @@ services:
       - ollama_data:/root/.ollama
 
   backend:
-    image: ghcr.io/vishn/sanctum-backend:latest
+    image: ghcr.io/vishnum08/sanctum-backend:latest
     container_name: vault_backend
     restart: always
     ports:
