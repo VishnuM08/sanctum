@@ -858,6 +858,129 @@ export function Notes({
     toast.success('Block deleted');
   };
 
+  const handleToggleCheckboxInMarkdown = (lineIndex: number) => {
+    const markdown = blocksToMarkdown(blocks);
+    const lines = markdown.split('\n');
+    const line = lines[lineIndex];
+    if (!line) return;
+
+    let newLine = line;
+    if (line.includes('[ ]')) {
+      newLine = line.replace('[ ]', '[x]');
+    } else if (line.includes('[x]')) {
+      newLine = line.replace('[x]', '[ ]');
+    } else if (line.includes('- [ ]')) {
+      newLine = line.replace('- [ ]', '- [x]');
+    } else if (line.includes('- [x]')) {
+      newLine = line.replace('- [x]', '- [ ]');
+    }
+
+    lines[lineIndex] = newLine;
+    const newMarkdown = lines.join('\n');
+    setBlocks(markdownToBlocks(newMarkdown));
+    toast.success('Task status updated');
+  };
+
+  const renderMarkdown = (text: string) => {
+    if (!text.trim()) {
+      return <p className="text-muted-foreground italic text-sm py-4">Page canvas is empty. Switch to Edit tab to write some markdown content.</p>;
+    }
+
+    const lines = text.split('\n');
+    const elements: React.ReactNode[] = [];
+
+    lines.forEach((line, idx) => {
+      // 1. Heading 1
+      if (line.startsWith('# ')) {
+        elements.push(<h1 key={idx} className="text-3xl font-extrabold text-foreground border-b border-border/40 pb-2 mb-4 mt-6">{line.slice(2)}</h1>);
+      }
+      // 2. Heading 2
+      else if (line.startsWith('## ')) {
+        elements.push(<h2 key={idx} className="text-2xl font-bold text-foreground pb-1 mb-3 mt-5">{line.slice(3)}</h2>);
+      }
+      // 3. Heading 3
+      else if (line.startsWith('### ')) {
+        elements.push(<h3 key={idx} className="text-xl font-semibold text-foreground mb-2 mt-4">{line.slice(4)}</h3>);
+      }
+      // 4. Horizontal Divider
+      else if (line.trim() === '---') {
+        elements.push(<hr key={idx} className="border-border/60 my-6" />);
+      }
+      // 5. Blockquotes & Custom Gradient Callouts
+      else if (line.startsWith('> ')) {
+        const quoteContent = line.slice(2);
+        if (quoteContent.startsWith('[!NOTE]') || quoteContent.startsWith('[!IMPORTANT]') || quoteContent.startsWith('[!WARNING]')) {
+          const type = quoteContent.includes('WARNING') ? 'warning' : quoteContent.includes('IMPORTANT') ? 'important' : 'note';
+          const cleanText = quoteContent.replace(/\[!(NOTE|IMPORTANT|WARNING)\]/i, '').trim();
+          elements.push(
+            <div key={idx} className={clsx(
+              "p-4 rounded-xl border my-4 flex gap-3 text-xs leading-relaxed",
+              type === 'warning' && "bg-red-500/5 border-red-500/20 text-red-500",
+              type === 'important' && "bg-primary/5 border-primary/20 text-primary",
+              type === 'note' && "bg-gradient-to-br from-primary/5 to-purple-500/5 border-primary/15 text-foreground"
+            )}>
+              <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
+              <div>{cleanText}</div>
+            </div>
+          );
+        } else {
+          elements.push(
+            <blockquote key={idx} className="border-l-4 border-primary pl-4 py-2 my-4 bg-secondary/35 text-sm italic rounded-r-xl text-muted-foreground">
+              {quoteContent}
+            </blockquote>
+          );
+        }
+      }
+      // 6. Interactive Task Checklist
+      else if (line.startsWith('- [ ] ') || line.startsWith('- [x] ') || line.startsWith('[ ] ') || line.startsWith('[x] ')) {
+        const isChecked = line.includes('[x]');
+        const taskText = line.replace(/^(-\s*)?\[[ x]\]\s*/i, '').trim();
+        elements.push(
+          <div key={idx} className="flex items-center gap-2.5 py-1 text-sm select-none">
+            <input
+              type="checkbox"
+              checked={isChecked}
+              onChange={() => handleToggleCheckboxInMarkdown(idx)}
+              className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20 cursor-pointer"
+            />
+            <span className={clsx(isChecked && "line-through text-muted-foreground")}>{taskText}</span>
+          </div>
+        );
+      }
+      // 7. Bullet Lists
+      else if (line.startsWith('• ') || line.startsWith('- ') || line.startsWith('* ')) {
+        const itemText = line.replace(/^([•\-\*])\s*/, '').trim();
+        elements.push(
+          <ul key={idx} className="list-disc pl-5 my-1 text-sm space-y-1 text-foreground/90">
+            <li>{itemText}</li>
+          </ul>
+        );
+      }
+      // 8. Numbered Lists
+      else if (/^\d+\.\s+/.test(line)) {
+        const itemText = line.replace(/^\d+\.\s+/, '').trim();
+        elements.push(
+          <ol key={idx} className="list-decimal pl-5 my-1 text-sm space-y-1 text-foreground/90">
+            <li>{itemText}</li>
+          </ol>
+        );
+      }
+      // 9. Standard paragraphs and basic inline text decorators
+      else {
+        if (line.trim() !== '') {
+          let formattedLine: React.ReactNode = line;
+          if (line.includes('**')) {
+            const parts = line.split('**');
+            formattedLine = parts.map((part, i) => i % 2 === 1 ? <strong key={i} className="font-extrabold text-foreground">{part}</strong> : part);
+          }
+          elements.push(<p key={idx} className="text-sm leading-relaxed text-foreground/90 my-2">{formattedLine}</p>);
+        }
+      }
+    });
+
+    return <div className="space-y-1.5">{elements}</div>;
+  };
+
   // Template select trigger
   const applyTemplate = (templateKey: keyof typeof defaultTemplates) => {
     const templateMeta: Record<string, { icon: string; cover: string; title: string }> = {
