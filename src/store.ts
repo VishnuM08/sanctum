@@ -598,27 +598,13 @@ export const useStore = create<StoreState>()(
           const parsedDatabases: Database[] = [];
 
           if (serverNotes.length === 0) {
-            // New user on the server: upload local seed data so they start with onboarding pages!
-            const seed = buildSeedData();
-            // Store locally first
+            // Start with a clean workspace (no seed/dummy data)
             set({
-              pages: seed.pages,
-              databases: seed.databases,
-              topLevelPageIds: seed.topLevelPageIds,
-              activeView: { type: 'page', id: seed.topLevelPageIds[0] },
+              pages: [],
+              databases: [],
+              topLevelPageIds: [],
+              activeView: { type: 'home' },
             });
-
-            // Create on backend sequentially
-            for (const p of seed.pages) {
-              const matchedDb = p.databaseId ? seed.databases.find(db => db.id === p.databaseId) : undefined;
-              const contentStr = serializePageContent(p, matchedDb);
-              try {
-                const created = await api.createNote(p.title || 'Untitled', contentStr);
-                get()._replacePageId(p.id, created.id);
-              } catch (err) {
-                console.error('Failed to seed note:', p.title, err);
-              }
-            }
             return;
           }
 

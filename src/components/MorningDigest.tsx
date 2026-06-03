@@ -4,10 +4,7 @@ import { useStore } from '../store';
 import { format, isToday, isTomorrow, formatDistanceToNow } from 'date-fns';
 
 function greeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
-  return 'Good evening';
+  return 'Hi';
 }
 
 function writingPrompt(): string {

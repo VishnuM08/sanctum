@@ -171,7 +171,7 @@ export function LandingPage() {
         <div className="landing-nav-inner">
           <div className="landing-brand">
             <BrandLogo size={28} />
-            <span>Notebook</span>
+            <span>Sanctum</span>
           </div>
           <nav className="landing-nav-links">
             <a href="#features">Features</a>
@@ -214,7 +214,7 @@ export function LandingPage() {
                 )}
               </button>
             )}
-            <span className="landing-cta-note">Prototype — simulated sign-in, no account needed</span>
+            <span className="landing-cta-note">Sign in securely with Google to access your workspace</span>
           </div>
 
           <div className="landing-trust hero-anim" style={{ animationDelay: '480ms' }}>
@@ -305,8 +305,8 @@ export function LandingPage() {
       </section>
 
       <footer className="landing-footer">
-        <div className="landing-brand"><BrandLogo size={22} /><span>Notebook</span></div>
-        <span className="landing-footer-note">A frontend prototype · built with React + TipTap</span>
+        <div className="landing-brand"><BrandLogo size={22} /><span>Sanctum</span></div>
+        <span className="landing-footer-note">Sanctum · Secure AI-Powered Organizer</span>
       </footer>
     </div>
   );
