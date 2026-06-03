@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-ssr
+*.local
+.vite
+.DS_Store
+*.log
+.env
+.env.local
+
+# Local dev artifacts / machine-specific config
+dev*.txt
+.claude/

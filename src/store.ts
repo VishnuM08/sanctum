@@ -1,0 +1,1443 @@
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { nanoid } from 'nanoid';
+import type {
+  Page, Database, Workspace, UserProfile, AppSettings,
+  AppView, SettingsSection, DatabaseCellValue, InboxItem, PageSnapshot,
+  VaultEntry, EncryptedVaultEntry, VaultMeta, Reminder, AgentLog, VaultCategory,
+} from './types';
+import {
+  deriveKey, generateSalt, makeVerifier, checkVerifier,
+  encryptString, decryptString,
+} from './utils/vaultCrypto';
+import { api } from './utils/api';
+
+/**
+ * Helper to check if an ID is a valid standard UUID.
+ * Synced server notes/pages have standard UUIDs, whereas local/simulated pages have nanoid IDs.
+ */
+const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
+/**
+ * The derived AES key lives ONLY in this module-level variable — never in the
+ * persisted store, never in localStorage. On reload it's gone and the vault
+ * locks automatically.
+ */
+let vaultKey: CryptoKey | null = null;
+
+// ── Serialization / Deserialization helpers ─────────────────────────────────
+
+interface SerializedPage {
+  icon?: string;
+  cover?: any;
+  editorContent?: unknown;
+  parentId?: string | null;
+  children?: string[];
+  isExpanded?: boolean;
+  isFavorite?: boolean;
+  isDeleted?: boolean;
+  deletedAt?: number;
+  isPublished?: boolean;
+  isLocked?: boolean;
+  isPrivate?: boolean;
+  font?: 'default' | 'serif' | 'mono';
+  isFullWidth?: boolean;
+  isSmallText?: boolean;
+  databaseId?: string;
+  expiresAt?: number;
+  snapshots?: PageSnapshot[];
+  tags?: string[];
+  aiSummary?: string;
+  database?: Database; // Nested database schema + rows if this page is a database view
+}
+
+function serializePageContent(page: Page, database?: Database): string {
+  const data: SerializedPage = {
+    icon: page.icon,
+    cover: page.cover,
+    editorContent: page.content,
+    parentId: page.parentId,
+    children: page.children,
+    isExpanded: page.isExpanded,
+    isFavorite: page.isFavorite,
+    isDeleted: page.isDeleted,
+    deletedAt: page.deletedAt,
+    isPublished: page.isPublished,
+    isLocked: page.isLocked,
+    isPrivate: page.isPrivate,
+    font: page.font,
+    isFullWidth: page.isFullWidth,
+    isSmallText: page.isSmallText,
+    databaseId: page.databaseId,
+    expiresAt: page.expiresAt,
+    snapshots: page.snapshots,
+    tags: page.tags,
+    aiSummary: page.aiSummary,
+    database: database,
+  };
+  return JSON.stringify(data);
+}
+
+function deserializePageContent(
+  backendId: string,
+  backendTitle: string,
+  backendContent: string,
+  backendTags?: string[],
+  backendAiSummary?: string,
+  backendCreatedAt?: number,
+  backendUpdatedAt?: number
+): { page: Page; database?: Database } {
+  const defaultPage = (contentVal: any): Page => ({
+    id: backendId,
+    title: backendTitle || '',
+    icon: '📄',
+    content: contentVal,
+    parentId: null,
+    children: [],
+    isExpanded: false,
+    isFavorite: false,
+    isDeleted: false,
+    isPublished: false,
+    isLocked: false,
+    isPrivate: false,
+    font: 'default',
+    isFullWidth: false,
+    isSmallText: false,
+    createdAt: backendCreatedAt || Date.now(),
+    updatedAt: backendUpdatedAt || Date.now(),
+    tags: backendTags || [],
+    aiSummary: backendAiSummary || '',
+  });
+
+  if (!backendContent) {
+    return { page: defaultPage(null) };
+  }
+
+  try {
+    const data = JSON.parse(backendContent) as SerializedPage;
+    if (data && (data.editorContent !== undefined || data.parentId !== undefined || data.database !== undefined)) {
+      const page: Page = {
+        id: backendId,
+        title: backendTitle || '',
+        icon: data.icon ?? '📄',
+        cover: data.cover,
+        content: data.editorContent ?? null,
+        parentId: data.parentId ?? null,
+        children: data.children ?? [],
+        isExpanded: !!data.isExpanded,
+        isFavorite: !!data.isFavorite,
+        isDeleted: !!data.isDeleted,
+        deletedAt: data.deletedAt,
+        isPublished: !!data.isPublished,
+        isLocked: !!data.isLocked,
+        isPrivate: !!data.isPrivate,
+        font: data.font ?? 'default',
+        isFullWidth: !!data.isFullWidth,
+        isSmallText: !!data.isSmallText,
+        databaseId: data.databaseId,
+        expiresAt: data.expiresAt,
+        snapshots: data.snapshots,
+        tags: data.tags ?? backendTags ?? [],
+        aiSummary: data.aiSummary ?? backendAiSummary ?? '',
+        createdAt: backendCreatedAt || Date.now(),
+        updatedAt: backendUpdatedAt || Date.now(),
+      };
+      return { page, database: data.database };
+    }
+  } catch (e) {
+    // raw fallback
+  }
+
+  // Raw text fallback in case of legacy notes
+  const doc = {
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        content: [{ type: 'text', text: backendContent }]
+      }
+    ]
+  };
+  return { page: defaultPage(doc) };
+}
+
+// ── Seed helpers ──────────────────────────────────────────────────────────────
+
+function makePage(overrides: Partial<Page> & { id?: string }): Page {
+  return {
+    id: overrides.id ?? nanoid(),
+    title: '',
+    icon: '📄',
+    content: null,
+    parentId: null,
+    children: [],
+    isExpanded: false,
+    isFavorite: false,
+    isDeleted: false,
+    isPublished: false,
+    isLocked: false,
+    isPrivate: false,
+    font: 'default',
+    isFullWidth: false,
+    isSmallText: false,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    ...overrides,
+  };
+}
+
+function makeDatabase(overrides: Partial<Database> & Pick<Database, 'title' | 'properties' | 'rows'>): Database {
+  const tableViewId = nanoid();
+  return {
+    id: overrides.id ?? nanoid(),
+    icon: '🗄️',
+    views: [
+      { id: tableViewId, name: 'Table', type: 'table', sorts: [], filters: [], hiddenPropertyIds: [] },
+      { id: nanoid(), name: 'Board', type: 'board', groupByPropertyId: undefined, sorts: [], filters: [], hiddenPropertyIds: [] },
+      { id: nanoid(), name: 'Gallery', type: 'gallery', sorts: [], filters: [], hiddenPropertyIds: [] },
+      { id: nanoid(), name: 'List', type: 'list', sorts: [], filters: [], hiddenPropertyIds: [] },
+    ],
+    activeViewId: tableViewId,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    ...overrides,
+  };
+}
+
+function row(values: Record<string, DatabaseCellValue>, order: number): Database['rows'][0] {
+  return { id: nanoid(), values, order };
+}
+
+function buildSeedData() {
+  const gettingStartedId = nanoid();
+  const quickStartId = nanoid();
+  const shortcutsId = nanoid();
+  const projectsId = nanoid();
+  const websiteId = nanoid();
+  const marketingId = nanoid();
+  const personalId = nanoid();
+  const readingId = nanoid();
+  const goalsId = nanoid();
+
+  const taskDbId = nanoid();
+  const bookDbId = nanoid();
+
+  const taskStatusPropId = nanoid();
+  const taskPriorityPropId = nanoid();
+  const taskDuePropId = nanoid();
+  const taskAssigneePropId = nanoid();
+  const taskTagsPropId = nanoid();
+  const taskProgressPropId = nanoid();
+
+  const bookAuthorPropId = nanoid();
+  const bookGenrePropId = nanoid();
+  const bookRatingPropId = nanoid();
+  const bookReadPropId = nanoid();
+  const bookNotesPropId = nanoid();
+
+  const gettingStartedContent = {
+    type: 'doc',
+    content: [
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Welcome to Notebook 2.0 👋' }] },
+      { type: 'paragraph', content: [{ type: 'text', text: 'Your all-in-one workspace for notes, tasks, and databases. Explore the sidebar or create a new page to get started.' }] },
+      { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Key features' }] },
+      {
+        type: 'bulletList', content: [
+          { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Rich text editor with slash commands (type /)' }] }] },
+          { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Nested pages and page hierarchy' }] }] },
+          { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Databases: Table, Board, Gallery, List views' }] }] },
+          { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Dark mode with system preference detection' }] }] },
+          { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Quick search with Cmd+K' }] }] },
+        ],
+      },
+    ],
+  };
+
+  const pages: Page[] = [
+    makePage({
+      id: gettingStartedId,
+      title: 'Getting Started',
+      icon: '👋',
+      content: gettingStartedContent,
+      isFavorite: true,
+      isExpanded: true,
+      children: [quickStartId, shortcutsId],
+    }),
+    makePage({
+      id: quickStartId,
+      title: 'Quick Start Guide',
+      icon: '🚀',
+      parentId: gettingStartedId,
+      content: {
+        type: 'doc',
+        content: [
+          { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Quick Start Guide' }] },
+          { type: 'paragraph', content: [{ type: 'text', text: 'Start writing anywhere on the page. Use the slash (/) command to insert blocks.' }] },
+        ],
+      },
+    }),
+    makePage({
+      id: shortcutsId,
+      title: 'Keyboard Shortcuts',
+      icon: '⌨️',
+      parentId: gettingStartedId,
+      content: {
+        type: 'doc',
+        content: [
+          { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Keyboard Shortcuts' }] },
+        ],
+      },
+    }),
+    makePage({
+      id: projectsId,
+      title: 'My Projects',
+      icon: '📁',
+      isExpanded: true,
+      children: [websiteId, marketingId],
+    }),
+    makePage({
+      id: websiteId,
+      title: 'Website Redesign',
+      icon: '🌐',
+      parentId: projectsId,
+      databaseId: taskDbId,
+    }),
+    makePage({
+      id: marketingId,
+      title: 'Marketing Campaign',
+      icon: '📣',
+      parentId: projectsId,
+      content: {
+        type: 'doc',
+        content: [
+          { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Q1 Marketing Campaign' }] },
+        ],
+      },
+    }),
+    makePage({
+      id: personalId,
+      title: 'Personal',
+      icon: '🏠',
+      isExpanded: true,
+      children: [readingId, goalsId],
+    }),
+    makePage({
+      id: readingId,
+      title: 'Reading List',
+      icon: '📚',
+      parentId: personalId,
+      databaseId: bookDbId,
+    }),
+    makePage({
+      id: goalsId,
+      title: 'Goals 2025',
+      icon: '🎯',
+      parentId: personalId,
+      isFavorite: true,
+      content: {
+        type: 'doc',
+        content: [
+          { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: '2025 Goals' }] },
+        ],
+      },
+    }),
+  ];
+
+  const taskBoardViewId = nanoid();
+  const taskDb = makeDatabase({
+    id: taskDbId,
+    title: 'Project Tasks',
+    icon: '✅',
+    views: [
+      { id: nanoid(), name: 'All Tasks', type: 'table', sorts: [], filters: [], hiddenPropertyIds: [] },
+      { id: taskBoardViewId, name: 'By Status', type: 'board', groupByPropertyId: taskStatusPropId, sorts: [], filters: [], hiddenPropertyIds: [] },
+    ],
+    properties: [
+      { id: 'title', name: 'Name', type: 'title', width: 260, hidden: false },
+      {
+        id: taskStatusPropId, name: 'Status', type: 'select', width: 130, hidden: false,
+        options: [
+          { id: nanoid(), name: 'Not Started', color: 'gray' },
+          { id: nanoid(), name: 'In Progress', color: 'blue' },
+          { id: nanoid(), name: 'Done', color: 'green' },
+        ],
+      },
+      { id: taskDuePropId, name: 'Due Date', type: 'date', width: 130, hidden: false },
+    ],
+    rows: [
+      row({ title: 'Redesign homepage', [taskStatusPropId]: 'In Progress', [taskDuePropId]: '2026-06-15' }, 0),
+      row({ title: 'Fix login bug', [taskStatusPropId]: 'Done', [taskDuePropId]: '2026-06-03' }, 1),
+    ],
+  });
+
+  const bookGalleryViewId = nanoid();
+  const bookDb = makeDatabase({
+    id: bookDbId,
+    title: 'Book Collection',
+    icon: '📚',
+    views: [
+      { id: nanoid(), name: 'Table', type: 'table', sorts: [], filters: [], hiddenPropertyIds: [] },
+      { id: bookGalleryViewId, name: 'Gallery', type: 'gallery', sorts: [], filters: [], hiddenPropertyIds: [] },
+    ],
+    properties: [
+      { id: 'title', name: 'Title', type: 'title', width: 240, hidden: false },
+      { id: bookAuthorPropId, name: 'Author', type: 'text', width: 180, hidden: false },
+      {
+        id: bookGenrePropId, name: 'Genre', type: 'select', width: 120, hidden: false,
+        options: [
+          { id: nanoid(), name: 'Technical', color: 'blue' },
+          { id: nanoid(), name: 'Non-fiction', color: 'green' },
+        ],
+      },
+    ],
+    rows: [
+      row({ title: 'The Pragmatic Programmer', [bookAuthorPropId]: 'David Thomas, Andrew Hunt', [bookGenrePropId]: 'Technical' }, 0),
+    ],
+  });
+
+  return {
+    pages,
+    databases: [taskDb, bookDb],
+    topLevelPageIds: [gettingStartedId, projectsId, personalId],
+  };
+}
+
+// ── Store Interface ──────────────────────────────────────────────────────────
+
+interface StoreState {
+  pages: Page[];
+  databases: Database[];
+  topLevelPageIds: string[];
+  workspace: Workspace;
+  user: UserProfile;
+  settings: AppSettings;
+  activeView: AppView;
+  sidebarCollapsed: boolean;
+  sidebarWidth: number;
+  searchOpen: boolean;
+  zenMode: boolean;
+  shortcutsOpen: boolean;
+  aiKey: string;
+  visitHistory: string[];
+  inboxItems: InboxItem[];
+  inboxOpen: boolean;
+
+  vaultMeta: VaultMeta;
+  vaultEncrypted: EncryptedVaultEntry[];
+  vaultUnlocked: boolean;
+  vaultEntries: VaultEntry[];
+
+  isAuthenticated: boolean;
+
+  // Backend Integration
+  syncWithBackend: () => Promise<void>;
+  isServerOnline: boolean;
+  setIsServerOnline: (online: boolean) => void;
+
+  // Page actions
+  createPage: (parentId?: string | null) => string;
+  updatePage: (id: string, patch: Partial<Omit<Page, 'id'>>) => void;
+  deletePage: (id: string) => void;
+  restorePage: (id: string) => void;
+  permanentlyDeletePage: (id: string) => void;
+  toggleFavorite: (id: string) => void;
+  toggleExpanded: (id: string) => void;
+  movePage: (id: string, newParentId: string | null, afterId?: string) => void;
+
+  // Navigation
+  navigate: (view: AppView) => void;
+  navigateToPage: (id: string) => void;
+  navigateToSettings: (section?: SettingsSection) => void;
+
+  // Database actions
+  updateDatabase: (id: string, patch: Partial<Omit<Database, 'id'>>) => void;
+  addDatabaseRow: (databaseId: string, values?: Record<string, DatabaseCellValue>) => string;
+  updateDatabaseRow: (databaseId: string, rowId: string, values: Record<string, DatabaseCellValue>) => void;
+  deleteDatabaseRow: (databaseId: string, rowId: string) => void;
+  setDatabaseView: (databaseId: string, viewId: string) => void;
+  moveBoardRow: (databaseId: string, rowId: string, newGroupValue: string, groupPropertyId: string) => void;
+
+  // Settings
+  updateSettings: (patch: Partial<AppSettings>) => void;
+  updateWorkspace: (patch: Partial<Workspace>) => void;
+  toggleSidebar: () => void;
+  setSidebarWidth: (w: number) => void;
+  setSearchOpen: (open: boolean) => void;
+  toggleZenMode: () => void;
+  setShortcutsOpen: (open: boolean) => void;
+  setAiKey: (key: string) => void;
+  logVisit: (id: string) => void;
+  reorderTopLevelPages: (newOrder: string[]) => void;
+  reorderChildren: (parentId: string, newOrder: string[]) => void;
+  reorderFavorites: (newOrder: string[]) => void;
+  favoriteOrder: string[];
+  setPagePrivate: (id: string, isPrivate: boolean) => void;
+  setPageExpiry: (id: string, expiresAt?: number) => void;
+  saveSnapshot: (id: string, wordCount: number) => void;
+  setPageTags: (id: string, tags: string[]) => void;
+  setPageAiSummary: (id: string, summary: string) => void;
+  getDailyNoteId: () => string;
+  setInboxOpen: (open: boolean) => void;
+  markInboxRead: () => void;
+
+  // Vault actions
+  setupVault: (masterPassword: string) => Promise<void>;
+  unlockVault: (masterPassword: string) => Promise<boolean>;
+  lockVault: () => void;
+  resetVault: () => void;
+  addVaultEntry: (entry: Omit<VaultEntry, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateVaultEntry: (id: string, patch: Partial<Omit<VaultEntry, 'id' | 'createdAt'>>) => Promise<void>;
+  deleteVaultEntry: (id: string) => void;
+  setVaultAutoLock: (minutes: number) => void;
+
+  // Auth actions
+  signIn: (profile?: Partial<UserProfile>) => void;
+  signOut: () => void;
+
+  // Database view filters/sorts
+  updateDatabaseViewFilters: (databaseId: string, viewId: string, filters: import('./types').DatabaseFilterConfig[]) => void;
+  updateDatabaseViewSorts: (databaseId: string, viewId: string, sorts: import('./types').DatabaseSortConfig[]) => void;
+
+  _loadSeed: (data: ReturnType<typeof buildSeedData>) => void;
+
+  // Selectors
+  getPage: (id: string) => Page | undefined;
+  getDatabase: (id: string) => Database | undefined;
+  getPagePath: (id: string) => Page[];
+  getChildPages: (parentId: string | null) => Page[];
+  getFavoritePages: () => Page[];
+  getDeletedPages: () => Page[];
+}
+
+// ── Store ────────────────────────────────────────────────────────────────────
+
+export const useStore = create<StoreState>()(
+  persist(
+    (set, get) => ({
+      pages: [],
+      databases: [],
+      topLevelPageIds: [],
+      workspace: {
+        id: nanoid(),
+        name: 'My Workspace',
+        icon: '🏢',
+        plan: 'free',
+      },
+      user: {
+        id: nanoid(),
+        name: 'You',
+        email: 'you@example.com',
+        avatar: '🧑',
+        color: '#2383e2',
+      },
+      settings: {
+        theme: 'light',
+        density: 'default',
+        typewriterMode: false,
+      },
+      activeView: { type: 'home' },
+      sidebarCollapsed: false,
+      sidebarWidth: 240,
+      searchOpen: false,
+      zenMode: false,
+      shortcutsOpen: false,
+      aiKey: '',
+      visitHistory: [],
+      inboxItems: [],
+      inboxOpen: false,
+      favoriteOrder: [],
+
+      vaultMeta: { initialized: false, salt: '', verifier: '', autoLockMinutes: 5 },
+      vaultEncrypted: [],
+      vaultUnlocked: false,
+      vaultEntries: [],
+
+      isAuthenticated: api.getToken() !== null,
+      isServerOnline: false,
+
+      setIsServerOnline: (online) => set({ isServerOnline: online }),
+
+      // Helper to replace temporary page IDs seamlessly once saved on backend
+      _replacePageId: (tempId: string, realId: string) => {
+        set((s) => {
+          const pages = s.pages.map((p) => {
+            let children = p.children;
+            if (children.includes(tempId)) {
+              children = children.map((c) => (c === tempId ? realId : c));
+            }
+            let parentId = p.parentId;
+            if (p.parentId === tempId) {
+              parentId = realId;
+            }
+            if (p.id === tempId) {
+              return { ...p, id: realId, parentId };
+            }
+            return { ...p, parentId, children };
+          });
+
+          const topLevelPageIds = s.topLevelPageIds.map((id) => (id === tempId ? realId : id));
+          
+          let activeView = s.activeView;
+          if (activeView.type === 'page' && activeView.id === tempId) {
+            activeView = { ...activeView, id: realId };
+          }
+
+          const visitHistory = s.visitHistory.map((id) => (id === tempId ? realId : id));
+          const favoriteOrder = s.favoriteOrder.map((id) => (id === tempId ? realId : id));
+
+          return { pages, topLevelPageIds, activeView, visitHistory, favoriteOrder };
+        });
+      },
+
+      // Sync data with REST endpoints
+      syncWithBackend: async () => {
+        if (!api.getToken()) return;
+        try {
+          const serverNotes = await api.getNotes();
+          const parsedPages: Page[] = [];
+          const parsedDatabases: Database[] = [];
+
+          if (serverNotes.length === 0) {
+            // New user on the server: upload local seed data so they start with onboarding pages!
+            const seed = buildSeedData();
+            // Store locally first
+            set({
+              pages: seed.pages,
+              databases: seed.databases,
+              topLevelPageIds: seed.topLevelPageIds,
+              activeView: { type: 'page', id: seed.topLevelPageIds[0] },
+            });
+
+            // Create on backend sequentially
+            for (const p of seed.pages) {
+              const matchedDb = p.databaseId ? seed.databases.find(db => db.id === p.databaseId) : undefined;
+              const contentStr = serializePageContent(p, matchedDb);
+              try {
+                const created = await api.createNote(p.title || 'Untitled', contentStr);
+                get()._replacePageId(p.id, created.id);
+              } catch (err) {
+                console.error('Failed to seed note:', p.title, err);
+              }
+            }
+            return;
+          }
+
+          for (const note of serverNotes) {
+            const createdAtNum = note.createdAt ? new Date(note.createdAt).getTime() : Date.now();
+            const updatedAtNum = note.updatedAt ? new Date(note.updatedAt).getTime() : Date.now();
+            const { page, database } = deserializePageContent(
+              note.id,
+              note.title,
+              note.content,
+              note.tags,
+              note.aiSummary,
+              createdAtNum,
+              updatedAtNum
+            );
+            parsedPages.push(page);
+            if (database) {
+              parsedDatabases.push(database);
+            }
+          }
+
+          const topLevelPageIds = parsedPages
+            .filter((p) => !p.parentId && !p.isDeleted)
+            .sort((a, b) => b.createdAt - a.createdAt)
+            .map((p) => p.id);
+
+          set({ pages: parsedPages, databases: parsedDatabases, topLevelPageIds });
+
+          // Sync reminders
+          try {
+            const backendReminders = await api.getReminders();
+            const inboxItems: InboxItem[] = backendReminders.map((r) => ({
+              id: r.id,
+              type: r.aiGenerated ? 'reminder' : 'reminder',
+              title: r.title,
+              pageId: r.noteId || undefined,
+              time: r.createdAt ? new Date(r.createdAt).getTime() : Date.now(),
+              read: r.fired,
+            }));
+            set({ inboxItems });
+          } catch (e) {
+            console.error('Failed to sync reminders:', e);
+          }
+
+          // Sync vault if unlocked
+          if (get().vaultUnlocked && vaultKey) {
+            try {
+              const backendVault = await api.getVaultEntries();
+              const vaultEntries: VaultEntry[] = [];
+              const vaultEncrypted: EncryptedVaultEntry[] = [];
+
+              for (const v of backendVault) {
+                try {
+                  const decryptedJson = await decryptString(v.value, vaultKey);
+                  const entry = JSON.parse(decryptedJson) as VaultEntry;
+                  entry.id = v.id;
+                  vaultEntries.push(entry);
+                  vaultEncrypted.push({
+                    id: v.id,
+                    blob: v.value,
+                    createdAt: v.createdAt ? new Date(v.createdAt).getTime() : Date.now(),
+                    updatedAt: v.createdAt ? new Date(v.createdAt).getTime() : Date.now(),
+                  });
+                } catch { /* decrypt fail */ }
+              }
+              vaultEntries.sort((a, b) => b.updatedAt - a.updatedAt);
+              set({ vaultEntries, vaultEncrypted });
+            } catch (e) {
+              console.error('Failed to fetch vault items:', e);
+            }
+          }
+
+        } catch (e) {
+          console.error('Failed to sync with backend:', e);
+        }
+      },
+
+      // ── Page actions ─────────────────────────────────────────────────────
+
+      createPage: (parentId = null) => {
+        const id = nanoid(); // temporary local ID
+        const page: Page = {
+          id,
+          title: '',
+          icon: '📄',
+          content: null,
+          parentId,
+          children: [],
+          isExpanded: false,
+          isFavorite: false,
+          isDeleted: false,
+          isPublished: false,
+          isLocked: false,
+          isPrivate: false,
+          font: 'default',
+          isFullWidth: false,
+          isSmallText: false,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+
+        set((s) => {
+          const newPages = [...s.pages, page];
+          let newTopLevel = s.topLevelPageIds;
+          let updatedPages = newPages;
+          if (parentId) {
+            updatedPages = newPages.map((p) =>
+              p.id === parentId
+                ? { ...p, children: [...p.children, id], isExpanded: true }
+                : p
+            );
+          } else {
+            newTopLevel = [id, ...s.topLevelPageIds];
+          }
+          return { pages: updatedPages, topLevelPageIds: newTopLevel };
+        });
+
+        // Trigger optimistic backend note creation
+        if (api.getToken()) {
+          const contentStr = serializePageContent(page);
+          api.createNote('Untitled Page', contentStr)
+            .then((created) => {
+              get()._replacePageId(id, created.id);
+            })
+            .catch((err) => console.error('Failed to sync new page to backend', err));
+        }
+
+        get().navigate({ type: 'page', id });
+        return id;
+      },
+
+      updatePage: (id, patch) => {
+        set((s) => ({
+          pages: s.pages.map((p) =>
+            p.id === id ? { ...p, ...patch, updatedAt: Date.now() } : p
+          ),
+        }));
+
+        // Trigger backend update
+        const page = get().pages.find((p) => p.id === id);
+        if (page && api.getToken() && isUuid(id)) {
+          const matchedDb = page.databaseId ? get().databases.find((db) => db.id === page.databaseId) : undefined;
+          const contentStr = serializePageContent(page, matchedDb);
+          api.updateNote(id, page.title || 'Untitled', contentStr)
+            .catch((err) => console.error('Failed to update page on backend', err));
+        }
+      },
+
+      deletePage: (id) => {
+        set((s) => {
+          const updated = s.pages.map((p) => {
+            if (p.id === id) return { ...p, isDeleted: true, deletedAt: Date.now() };
+            if (p.children.includes(id)) return { ...p, children: p.children.filter((c) => c !== id) };
+            return p;
+          });
+          const newTopLevel = s.topLevelPageIds.filter((tid) => tid !== id);
+          const view = s.activeView;
+          const newView: AppView = view.type === 'page' && view.id === id ? { type: 'home' } : view;
+          return { pages: updated, topLevelPageIds: newTopLevel, activeView: newView };
+        });
+
+        // Sync soft deletion to backend
+        const page = get().pages.find((p) => p.id === id);
+        if (page && api.getToken() && isUuid(id)) {
+          const matchedDb = page.databaseId ? get().databases.find((db) => db.id === page.databaseId) : undefined;
+          const contentStr = serializePageContent(page, matchedDb);
+          api.updateNote(id, page.title || 'Untitled', contentStr)
+            .catch((err) => console.error('Failed to soft delete page on backend', err));
+        }
+      },
+
+      restorePage: (id) => {
+        set((s) => {
+          const page = s.pages.find((p) => p.id === id);
+          if (!page) return s;
+          const updated = s.pages.map((p) =>
+            p.id === id ? { ...p, isDeleted: false, deletedAt: undefined } : p
+          );
+          const parentId = page.parentId;
+          if (!parentId) {
+            return { pages: updated, topLevelPageIds: [id, ...s.topLevelPageIds] };
+          }
+          const parentExists = updated.find((p) => p.id === parentId && !p.isDeleted);
+          if (!parentExists) {
+            return {
+              pages: updated.map((p) => p.id === id ? { ...p, parentId: null } : p),
+              topLevelPageIds: [id, ...s.topLevelPageIds],
+            };
+          }
+          return {
+            pages: updated.map((p) =>
+              p.id === parentId ? { ...p, children: [...p.children, id] } : p
+            ),
+          };
+        });
+
+        // Sync restoration to backend
+        const page = get().pages.find((p) => p.id === id);
+        if (page && api.getToken() && isUuid(id)) {
+          const matchedDb = page.databaseId ? get().databases.find((db) => db.id === page.databaseId) : undefined;
+          const contentStr = serializePageContent(page, matchedDb);
+          api.updateNote(id, page.title || 'Untitled', contentStr)
+            .catch((err) => console.error('Failed to restore page on backend', err));
+        }
+      },
+
+      permanentlyDeletePage: (id) => {
+        set((s) => ({
+          pages: s.pages.filter((p) => p.id !== id),
+        }));
+
+        // Trigger permanent hard-delete on backend
+        if (api.getToken() && isUuid(id)) {
+          api.deleteNote(id)
+            .catch((err) => console.error('Failed to permanently delete page on backend', err));
+        }
+      },
+
+      toggleFavorite: (id) => {
+        set((s) => {
+          const page = s.pages.find((p) => p.id === id);
+          const adding = !page?.isFavorite;
+          const newOrder = adding
+            ? [id, ...s.favoriteOrder.filter((f) => f !== id)]
+            : s.favoriteOrder.filter((f) => f !== id);
+          return {
+            pages: s.pages.map((p) => p.id === id ? { ...p, isFavorite: !p.isFavorite } : p),
+            favoriteOrder: newOrder,
+          };
+        });
+
+        // Sync to backend
+        const page = get().pages.find((p) => p.id === id);
+        if (page && api.getToken() && isUuid(id)) {
+          const matchedDb = page.databaseId ? get().databases.find((db) => db.id === page.databaseId) : undefined;
+          const contentStr = serializePageContent(page, matchedDb);
+          api.updateNote(id, page.title || 'Untitled', contentStr)
+            .catch((err) => console.error('Failed to update favorite status on backend', err));
+        }
+      },
+
+      toggleExpanded: (id) => {
+        set((s) => ({
+          pages: s.pages.map((p) =>
+            p.id === id ? { ...p, isExpanded: !p.isExpanded } : p
+          ),
+        }));
+      },
+
+      movePage: (id, newParentId, _afterId) => {
+        set((s) => {
+          const page = s.pages.find((p) => p.id === id);
+          if (!page) return s;
+          const oldParentId = page.parentId;
+          let pages = s.pages.map((p) => {
+            if (p.id === oldParentId) return { ...p, children: p.children.filter((c) => c !== id) };
+            if (p.id === newParentId) return { ...p, children: [...p.children, id] };
+            if (p.id === id) return { ...p, parentId: newParentId };
+            return p;
+          });
+          let topLevelPageIds = s.topLevelPageIds;
+          if (!oldParentId) topLevelPageIds = topLevelPageIds.filter((t) => t !== id);
+          if (!newParentId) topLevelPageIds = [id, ...topLevelPageIds];
+          return { pages, topLevelPageIds };
+        });
+
+        // Sync move to backend
+        const page = get().pages.find((p) => p.id === id);
+        if (page && api.getToken() && isUuid(id)) {
+          const matchedDb = page.databaseId ? get().databases.find((db) => db.id === page.databaseId) : undefined;
+          const contentStr = serializePageContent(page, matchedDb);
+          api.updateNote(id, page.title || 'Untitled', contentStr)
+            .catch((err) => console.error('Failed to update page hierarchy on backend', err));
+        }
+      },
+
+      // ── Navigation ───────────────────────────────────────────────────────
+
+      navigate: (view) => set({ activeView: view }),
+      navigateToPage: (id) => {
+        set((s) => {
+          const hist = [id, ...s.visitHistory.filter((v) => v !== id)].slice(0, 8);
+          return { activeView: { type: 'page', id }, visitHistory: hist };
+        });
+      },
+      navigateToSettings: (section = 'account') =>
+        set({ activeView: { type: 'settings', section } }),
+
+      // ── Database actions ─────────────────────────────────────────────────
+
+      updateDatabase: (id, patch) => {
+        set((s) => ({
+          databases: s.databases.map((db) =>
+            db.id === id ? { ...db, ...patch, updatedAt: Date.now() } : db
+          ),
+        }));
+
+        // Find the page hosting this database and trigger page content update
+        const hostPage = get().pages.find((p) => p.databaseId === id);
+        if (hostPage && api.getToken() && isUuid(hostPage.id)) {
+          const updatedDb = get().databases.find((db) => db.id === id);
+          if (updatedDb) {
+            const contentStr = serializePageContent(hostPage, updatedDb);
+            api.updateNote(hostPage.id, hostPage.title || 'Database View', contentStr)
+              .catch((err) => console.error('Failed to update database schema on backend', err));
+          }
+        }
+      },
+
+      addDatabaseRow: (databaseId, values = {}) => {
+        const id = nanoid();
+        set((s) => ({
+          databases: s.databases.map((db) => {
+            if (db.id !== databaseId) return db;
+            const maxOrder = db.rows.reduce((m, r) => Math.max(m, r.order), -1);
+            return {
+              ...db,
+              rows: [...db.rows, { id, values: { title: '', ...values }, order: maxOrder + 1 }],
+              updatedAt: Date.now(),
+            };
+          }),
+        }));
+
+        const hostPage = get().pages.find((p) => p.databaseId === databaseId);
+        if (hostPage && api.getToken() && isUuid(hostPage.id)) {
+          const updatedDb = get().databases.find((db) => db.id === databaseId);
+          if (updatedDb) {
+            const contentStr = serializePageContent(hostPage, updatedDb);
+            api.updateNote(hostPage.id, hostPage.title || 'Database View', contentStr)
+              .catch((err) => console.error('Failed to sync new database row to backend', err));
+          }
+        }
+
+        return id;
+      },
+
+      updateDatabaseRow: (databaseId, rowId, values) => {
+        set((s) => ({
+          databases: s.databases.map((db) => {
+            if (db.id !== databaseId) return db;
+            return {
+              ...db,
+              rows: db.rows.map((r) =>
+                r.id === rowId ? { ...r, values: { ...r.values, ...values } } : r
+              ),
+              updatedAt: Date.now(),
+            };
+          }),
+        }));
+
+        const hostPage = get().pages.find((p) => p.databaseId === databaseId);
+        if (hostPage && api.getToken() && isUuid(hostPage.id)) {
+          const updatedDb = get().databases.find((db) => db.id === databaseId);
+          if (updatedDb) {
+            const contentStr = serializePageContent(hostPage, updatedDb);
+            api.updateNote(hostPage.id, hostPage.title || 'Database View', contentStr)
+              .catch((err) => console.error('Failed to update database row on backend', err));
+          }
+        }
+      },
+
+      deleteDatabaseRow: (databaseId, rowId) => {
+        set((s) => ({
+          databases: s.databases.map((db) =>
+            db.id === databaseId
+              ? { ...db, rows: db.rows.filter((r) => r.id !== rowId) }
+              : db
+          ),
+        }));
+
+        const hostPage = get().pages.find((p) => p.databaseId === databaseId);
+        if (hostPage && api.getToken() && isUuid(hostPage.id)) {
+          const updatedDb = get().databases.find((db) => db.id === databaseId);
+          if (updatedDb) {
+            const contentStr = serializePageContent(hostPage, updatedDb);
+            api.updateNote(hostPage.id, hostPage.title || 'Database View', contentStr)
+              .catch((err) => console.error('Failed to delete database row on backend', err));
+          }
+        }
+      },
+
+      setDatabaseView: (databaseId, viewId) => {
+        set((s) => ({
+          databases: s.databases.map((db) =>
+            db.id === databaseId ? { ...db, activeViewId: viewId } : db
+          ),
+        }));
+      },
+
+      moveBoardRow: (databaseId, rowId, newGroupValue, groupPropertyId) => {
+        set((s) => ({
+          databases: s.databases.map((db) => {
+            if (db.id !== databaseId) return db;
+            return {
+              ...db,
+              rows: db.rows.map((r) =>
+                r.id === rowId
+                  ? { ...r, values: { ...r.values, [groupPropertyId]: newGroupValue } }
+                  : r
+              ),
+            };
+          }),
+        }));
+
+        const hostPage = get().pages.find((p) => p.databaseId === databaseId);
+        if (hostPage && api.getToken() && isUuid(hostPage.id)) {
+          const updatedDb = get().databases.find((db) => db.id === databaseId);
+          if (updatedDb) {
+            const contentStr = serializePageContent(hostPage, updatedDb);
+            api.updateNote(hostPage.id, hostPage.title || 'Database View', contentStr)
+              .catch((err) => console.error('Failed to update board view state on backend', err));
+          }
+        }
+      },
+
+      // ── Database view filters/sorts ──────────────────────────────────────
+
+      updateDatabaseViewFilters: (databaseId, viewId, filters) => {
+        set((s) => ({
+          databases: s.databases.map((db) =>
+            db.id !== databaseId ? db : {
+              ...db,
+              views: db.views.map((v) => v.id !== viewId ? v : { ...v, filters }),
+            }
+          ),
+        }));
+
+        const hostPage = get().pages.find((p) => p.databaseId === databaseId);
+        if (hostPage && api.getToken() && isUuid(hostPage.id)) {
+          const updatedDb = get().databases.find((db) => db.id === databaseId);
+          if (updatedDb) {
+            const contentStr = serializePageContent(hostPage, updatedDb);
+            api.updateNote(hostPage.id, hostPage.title || 'Database View', contentStr)
+              .catch((err) => console.error('Failed to sync view filters on backend', err));
+          }
+        }
+      },
+
+      updateDatabaseViewSorts: (databaseId, viewId, sorts) => {
+        set((s) => ({
+          databases: s.databases.map((db) =>
+            db.id !== databaseId ? db : {
+              ...db,
+              views: db.views.map((v) => v.id !== viewId ? v : { ...v, sorts }),
+            }
+          ),
+        }));
+
+        const hostPage = get().pages.find((p) => p.databaseId === databaseId);
+        if (hostPage && api.getToken() && isUuid(hostPage.id)) {
+          const updatedDb = get().databases.find((db) => db.id === databaseId);
+          if (updatedDb) {
+            const contentStr = serializePageContent(hostPage, updatedDb);
+            api.updateNote(hostPage.id, hostPage.title || 'Database View', contentStr)
+              .catch((err) => console.error('Failed to sync view sorting on backend', err));
+          }
+        }
+      },
+
+      // ── Internal seed loader ─────────────────────────────────────────────
+
+      _loadSeed: (data) => {
+        set({
+          pages: data.pages,
+          databases: data.databases,
+          topLevelPageIds: data.topLevelPageIds,
+          activeView: { type: 'page', id: data.topLevelPageIds[0] },
+        });
+      },
+
+      // ── Settings ─────────────────────────────────────────────────────────
+
+      updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
+      updateWorkspace: (patch) => set((s) => ({ workspace: { ...s.workspace, ...patch } })),
+      toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+      setSidebarWidth: (w) => set({ sidebarWidth: Math.max(180, Math.min(480, w)) }),
+      setSearchOpen: (open) => set({ searchOpen: open }),
+      toggleZenMode: () => set((s) => ({ zenMode: !s.zenMode })),
+      setShortcutsOpen: (open) => set({ shortcutsOpen: open }),
+      setAiKey: (key) => set({ aiKey: key }),
+      logVisit: (id) => set((s) => ({ visitHistory: [id, ...s.visitHistory.filter((v) => v !== id)].slice(0, 8) })),
+      reorderTopLevelPages: (newOrder) => set({ topLevelPageIds: newOrder }),
+
+      reorderChildren: (parentId, newOrder) => {
+        set((s) => ({
+          pages: s.pages.map((p) =>
+            p.id === parentId ? { ...p, children: newOrder } : p
+          ),
+        }));
+
+        const page = get().pages.find((p) => p.id === parentId);
+        if (page && api.getToken() && isUuid(parentId)) {
+          const matchedDb = page.databaseId ? get().databases.find((db) => db.id === page.databaseId) : undefined;
+          const contentStr = serializePageContent(page, matchedDb);
+          api.updateNote(parentId, page.title || 'Untitled', contentStr)
+            .catch((err) => console.error('Failed to reorder children on backend', err));
+        }
+      },
+
+      reorderFavorites: (newOrder) => set({ favoriteOrder: newOrder }),
+
+      setPagePrivate: (id, isPrivate) => {
+        set((s) => ({ pages: s.pages.map((p) => p.id === id ? { ...p, isPrivate } : p) }));
+        const page = get().pages.find((p) => p.id === id);
+        if (page && api.getToken() && isUuid(id)) {
+          const matchedDb = page.databaseId ? get().databases.find((db) => db.id === page.databaseId) : undefined;
+          const contentStr = serializePageContent(page, matchedDb);
+          api.updateNote(id, page.title || 'Untitled', contentStr)
+            .catch((err) => console.error('Failed to update page security on backend', err));
+        }
+      },
+
+      setPageExpiry: (id, expiresAt) => {
+        set((s) => ({ pages: s.pages.map((p) => p.id === id ? { ...p, expiresAt } : p) }));
+        const page = get().pages.find((p) => p.id === id);
+        if (page && api.getToken() && isUuid(id)) {
+          const matchedDb = page.databaseId ? get().databases.find((db) => db.id === page.databaseId) : undefined;
+          const contentStr = serializePageContent(page, matchedDb);
+          api.updateNote(id, page.title || 'Untitled', contentStr)
+            .catch((err) => console.error('Failed to update page TTL expiry on backend', err));
+        }
+      },
+
+      saveSnapshot: (id, wordCount) => {
+        const page = get().pages.find((p) => p.id === id);
+        if (!page) return;
+        const snap: PageSnapshot = {
+          id: nanoid(),
+          content: page.content,
+          title: page.title,
+          savedAt: Date.now(),
+          wordCount,
+        };
+        set((s) => ({
+          pages: s.pages.map((p) => p.id === id ? {
+            ...p,
+            snapshots: [snap, ...(p.snapshots ?? [])].slice(0, 20),
+          } : p),
+        }));
+
+        const updatedPage = get().pages.find((p) => p.id === id);
+        if (updatedPage && api.getToken() && isUuid(id)) {
+          const matchedDb = updatedPage.databaseId ? get().databases.find((db) => db.id === updatedPage.databaseId) : undefined;
+          const contentStr = serializePageContent(updatedPage, matchedDb);
+          api.updateNote(id, updatedPage.title || 'Untitled', contentStr)
+            .catch((err) => console.error('Failed to save snapshot to backend', err));
+        }
+      },
+
+      setPageTags: (id, tags) => {
+        set((s) => ({ pages: s.pages.map((p) => p.id === id ? { ...p, tags } : p) }));
+        const page = get().pages.find((p) => p.id === id);
+        if (page && api.getToken() && isUuid(id)) {
+          const matchedDb = page.databaseId ? get().databases.find((db) => db.id === page.databaseId) : undefined;
+          const contentStr = serializePageContent(page, matchedDb);
+          api.updateNote(id, page.title || 'Untitled', contentStr)
+            .catch((err) => console.error('Failed to sync page tags to backend', err));
+        }
+      },
+
+      setPageAiSummary: (id, summary) => {
+        set((s) => ({ pages: s.pages.map((p) => p.id === id ? { ...p, aiSummary: summary } : p) }));
+        const page = get().pages.find((p) => p.id === id);
+        if (page && api.getToken() && isUuid(id)) {
+          const matchedDb = page.databaseId ? get().databases.find((db) => db.id === page.databaseId) : undefined;
+          const contentStr = serializePageContent(page, matchedDb);
+          api.updateNote(id, page.title || 'Untitled', contentStr)
+            .catch((err) => console.error('Failed to sync page AI summary to backend', err));
+        }
+      },
+
+      getDailyNoteId: () => {
+        const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        const title = `Daily Note — ${today}`;
+        const existing = get().pages.find((p) => p.title === title && !p.isDeleted);
+        if (existing) {
+          get().navigateToPage(existing.id);
+          return existing.id;
+        }
+        const id = get().createPage(null);
+        get().updatePage(id, {
+          title,
+          icon: '📅',
+          content: {
+            type: 'doc',
+            content: [
+              { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: today }] },
+              { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: '🌅 Morning intentions' }] },
+              { type: 'paragraph' },
+              { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: '✅ Today\'s focus' }] },
+              { type: 'taskList', content: [
+                { type: 'taskItem', attrs: { checked: false }, content: [{ type: 'paragraph' }] },
+              ]},
+              { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: '🌙 Evening reflection' }] },
+              { type: 'paragraph' },
+            ],
+          },
+        });
+        return id;
+      },
+      setInboxOpen: (open) => set({ inboxOpen: open }),
+      markInboxRead: () => {
+        set((s) => ({ inboxItems: s.inboxItems.map((i) => ({ ...i, read: true })) }));
+        if (api.getToken()) {
+          get().inboxItems.forEach((item) => {
+            if (item.type === 'reminder' && !item.read) {
+              api.completeReminder(item.id).catch(() => {});
+            }
+          });
+        }
+      },
+
+      // ── Vault actions ─────────────────────────────────────────────────────
+
+      setupVault: async (masterPassword) => {
+        const salt = generateSalt();
+        const key = await deriveKey(masterPassword, salt);
+        const verifier = await makeVerifier(key);
+        vaultKey = key;
+        set({
+          vaultMeta: { initialized: true, salt, verifier, autoLockMinutes: get().vaultMeta.autoLockMinutes },
+          vaultUnlocked: true,
+          vaultEntries: [],
+          vaultEncrypted: [],
+        });
+      },
+
+      unlockVault: async (masterPassword) => {
+        const { vaultMeta } = get();
+        if (!vaultMeta.initialized) return false;
+        const key = await deriveKey(masterPassword, vaultMeta.salt);
+        const ok = await checkVerifier(vaultMeta.verifier, key);
+        if (!ok) return false;
+        
+        vaultKey = key;
+        set({ vaultUnlocked: true });
+
+        // Retrieve entries from backend and decrypt
+        if (api.getToken()) {
+          try {
+            const backendVault = await api.getVaultEntries();
+            const entries: VaultEntry[] = [];
+            const vaultEncrypted: EncryptedVaultEntry[] = [];
+
+            for (const v of backendVault) {
+              try {
+                const json = await decryptString(v.value, key);
+                const entry = JSON.parse(json) as VaultEntry;
+                entry.id = v.id;
+                entries.push(entry);
+                vaultEncrypted.push({
+                  id: v.id,
+                  blob: v.value,
+                  createdAt: v.createdAt ? new Date(v.createdAt).getTime() : Date.now(),
+                  updatedAt: v.createdAt ? new Date(v.createdAt).getTime() : Date.now(),
+                });
+              } catch { /* decrypt fail */ }
+            }
+            entries.sort((a, b) => b.updatedAt - a.updatedAt);
+            set({ vaultEntries: entries, vaultEncrypted });
+          } catch (e) {
+            console.error('Failed to decrypt backend vault entries:', e);
+          }
+        }
+        return true;
+      },
+
+      lockVault: () => {
+        vaultKey = null;
+        set({ vaultUnlocked: false, vaultEntries: [] });
+      },
+
+      resetVault: () => {
+        vaultKey = null;
+        set({
+          vaultMeta: { initialized: false, salt: '', verifier: '', autoLockMinutes: 5 },
+          vaultEncrypted: [],
+          vaultUnlocked: false,
+          vaultEntries: [],
+        });
+      },
+
+      addVaultEntry: async (entry) => {
+        if (!vaultKey) return;
+        const now = Date.now();
+        const full: VaultEntry = { ...entry, id: nanoid(), createdAt: now, updatedAt: now };
+        const blob = await encryptString(JSON.stringify(full), vaultKey);
+
+        if (api.getToken()) {
+          try {
+            const created = await api.createVaultEntry(full.title, full.category as any, blob, full.expiresAt ? new Date(full.expiresAt).toISOString() : undefined);
+            full.id = created.id;
+            set((s) => ({
+              vaultEntries: [full, ...s.vaultEntries],
+              vaultEncrypted: [{ id: created.id, blob, createdAt: now, updatedAt: now }, ...s.vaultEncrypted],
+            }));
+          } catch (e) {
+            console.error('Failed to save encrypted vault entry to backend:', e);
+          }
+        } else {
+          set((s) => ({
+            vaultEntries: [full, ...s.vaultEntries],
+            vaultEncrypted: [{ id: full.id, blob, createdAt: now, updatedAt: now }, ...s.vaultEncrypted],
+          }));
+        }
+      },
+
+      updateVaultEntry: async (id, patch) => {
+        if (!vaultKey) return;
+        const existing = get().vaultEntries.find((e) => e.id === id);
+        if (!existing) return;
+        const updated: VaultEntry = { ...existing, ...patch, updatedAt: Date.now() };
+        const blob = await encryptString(JSON.stringify(updated), vaultKey);
+
+        if (api.getToken() && isUuid(id)) {
+          try {
+            await api.deleteVaultEntry(id);
+            const created = await api.createVaultEntry(updated.title, updated.category as any, blob, updated.expiresAt ? new Date(updated.expiresAt).toISOString() : undefined);
+            updated.id = created.id;
+            set((s) => ({
+              vaultEntries: s.vaultEntries.map((e) => e.id === id ? updated : e),
+              vaultEncrypted: s.vaultEncrypted.map((e) => e.id === id ? { ...e, id: created.id, blob, updatedAt: updated.updatedAt } : e),
+            }));
+          } catch (e) {
+            console.error('Failed to update vault entry:', e);
+          }
+        } else {
+          set((s) => ({
+            vaultEntries: s.vaultEntries.map((e) => e.id === id ? updated : e),
+            vaultEncrypted: s.vaultEncrypted.map((e) => e.id === id ? { ...e, blob, updatedAt: updated.updatedAt } : e),
+          }));
+        }
+      },
+
+      deleteVaultEntry: (id) => {
+        set((s) => ({
+          vaultEntries: s.vaultEntries.filter((e) => e.id !== id),
+          vaultEncrypted: s.vaultEncrypted.filter((e) => e.id !== id),
+        }));
+
+        if (api.getToken() && isUuid(id)) {
+          api.deleteVaultEntry(id)
+            .catch((err) => console.error('Failed to delete vault entry from backend', err));
+        }
+      },
+
+      setVaultAutoLock: (minutes) =>
+        set((s) => ({ vaultMeta: { ...s.vaultMeta, autoLockMinutes: minutes } })),
+
+      // ── Auth actions ──────────────────────────────────────────────────────
+
+      signIn: (profile) => {
+        set((s) => ({
+          isAuthenticated: true,
+          user: profile ? { ...s.user, ...profile } : s.user,
+        }));
+        
+        // Auto sign-in to backend on OAuth callback
+        (async () => {
+          try {
+            const data = await api.googleLogin("mock_google_id_token_vishnu");
+            api.setToken(data.token);
+            await get().syncWithBackend();
+          } catch (e) {
+            console.error('Failed to login to backend during signIn:', e);
+          }
+        })();
+      },
+
+      signOut: () => {
+        vaultKey = null;
+        api.logout();
+        set({ isAuthenticated: false, vaultUnlocked: false, vaultEntries: [], activeView: { type: 'home' } });
+      },
+
+      // ── Selectors ────────────────────────────────────────────────────────
+
+      getPage: (id) => get().pages.find((p) => p.id === id),
+      getDatabase: (id) => get().databases.find((db) => db.id === id),
+      getPagePath: (id) => {
+        const pages = get().pages;
+        const path: Page[] = [];
+        let current = pages.find((p) => p.id === id);
+        while (current) {
+          path.unshift(current);
+          current = current.parentId
+            ? pages.find((p) => p.id === current!.parentId)
+            : undefined;
+        }
+        return path;
+      },
+      getChildPages: (parentId) =>
+        get().pages.filter((p) => p.parentId === parentId && !p.isDeleted),
+      getFavoritePages: () =>
+        get().pages.filter((p) => p.isFavorite && !p.isDeleted),
+      getDeletedPages: () =>
+        get().pages.filter((p) => p.isDeleted),
+    }),
+    {
+      name: 'notebook-2.0-v4',
+      partialize: (state) => {
+        const { vaultUnlocked, vaultEntries, searchOpen, inboxOpen, shortcutsOpen, zenMode, ...rest } = state;
+        void vaultUnlocked; void vaultEntries; void searchOpen;
+        void inboxOpen; void shortcutsOpen; void zenMode;
+        return rest as typeof state;
+      },
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.vaultUnlocked = false;
+          state.vaultEntries = [];
+          if (api.getToken()) {
+            state.isAuthenticated = true;
+            state.syncWithBackend().catch(() => {});
+          } else if (state.pages.length === 0) {
+            const seed = buildSeedData();
+            state._loadSeed(seed);
+          }
+        }
+      },
+    }
+  )
+);
