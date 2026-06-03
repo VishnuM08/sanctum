@@ -74,7 +74,12 @@ export function MorningDigest() {
       {/* Hero */}
       <div className="digest-hero">
         <div className="digest-greeting">
-          {greeting()}, {user.name} {user.avatar}
+          {greeting()}, {user.name}{' '}
+          {user.avatar && (user.avatar.startsWith('http://') || user.avatar.startsWith('https://')) ? (
+            <img src={user.avatar} alt="avatar" style={{ width: 28, height: 28, borderRadius: '50%', verticalAlign: 'middle', marginLeft: 6, objectFit: 'cover' }} />
+          ) : (
+            user.avatar && <span style={{ marginLeft: 6 }}>{user.avatar}</span>
+          )}
         </div>
         <div className="digest-date">{format(new Date(), 'EEEE, MMMM d, yyyy')}</div>
       </div>

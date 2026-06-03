@@ -102,7 +102,11 @@ function AccountSection({ user, settings, updateSettings }: {
             justifyContent: 'center',
             fontSize: 24,
           }}>
-            {user.avatar}
+            {user.avatar && (user.avatar.startsWith('http://') || user.avatar.startsWith('https://')) ? (
+              <img src={user.avatar} alt="avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+            ) : (
+              user.avatar
+            )}
           </div>
           <button className="settings-btn secondary">Upload photo</button>
         </div>
