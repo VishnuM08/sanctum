@@ -491,7 +491,7 @@ interface StoreState {
   setVaultAutoLock: (minutes: number) => void;
 
   // Auth actions
-  signIn: (profile?: Partial<UserProfile>) => void;
+  signIn: (profile?: Partial<UserProfile>, idToken?: string) => void;
   signOut: () => void;
 
   // Database view filters/sorts
@@ -1370,7 +1370,7 @@ export const useStore = create<StoreState>()(
 
       // ── Auth actions ──────────────────────────────────────────────────────
 
-      signIn: (profile) => {
+      signIn: (profile, idToken) => {
         set((s) => ({
           isAuthenticated: true,
           user: profile ? { ...s.user, ...profile } : s.user,
@@ -1379,7 +1379,8 @@ export const useStore = create<StoreState>()(
         // Auto sign-in to backend on OAuth callback
         (async () => {
           try {
-            const data = await api.googleLogin("mock_google_id_token_vishnu");
+            const tokenToUse = idToken || "mock_google_id_token_vishnu";
+            const data = await api.googleLogin(tokenToUse);
             api.setToken(data.token);
             await get().syncWithBackend();
           } catch (e) {

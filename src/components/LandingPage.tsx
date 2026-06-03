@@ -42,14 +42,124 @@ const FEATURES = [
 export function LandingPage() {
   const signIn = useStore((s) => s.signIn);
   const [signingIn, setSigningIn] = useState(false);
+  const [googleReady, setGoogleReady] = useState(false);
+
+  const signInRef = useRef(signIn);
+  useEffect(() => {
+    signInRef.current = signIn;
+  }, [signIn]);
+
+  const handleGoogleLogin = async (response: any) => {
+    setSigningIn(true);
+    try {
+      const idToken = response.credential;
+      const base64Url = idToken.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      const payload = JSON.parse(jsonPayload);
+      
+      const name = payload.name || payload.email.split('@')[0];
+      const email = payload.email;
+      const avatar = payload.picture || '🧑‍💻';
+
+      signInRef.current({ name, email, avatar }, idToken);
+    } catch (err: any) {
+      console.error('Google Sign-In failed:', err);
+      // Fallback to simulated sign-in
+      signInRef.current({ name: 'Vishnu', email: 'vishnu.magesh@gmail.com', avatar: '🧑‍💻' });
+    } finally {
+      setSigningIn(false);
+    }
+  };
 
   const doGoogleSignIn = () => {
     setSigningIn(true);
     // Simulated sign-in — no real OAuth. Drops you straight into the app.
     setTimeout(() => {
-      signIn({ name: 'Vishnu', email: 'vishnu.magesh@gmail.com', avatar: '🧑‍💻' });
+      signInRef.current({ name: 'Vishnu', email: 'vishnu.magesh@gmail.com', avatar: '🧑‍💻' });
     }, 850);
   };
+
+  useEffect(() => {
+    let checkInterval: any;
+    let attempts = 0;
+
+    const initGoogle = () => {
+      const google = (window as any).google;
+      if (typeof window !== 'undefined' && google?.accounts?.id) {
+        try {
+          google.accounts.id.initialize({
+            client_id: '335592680836-vgpg4tlh2rip0ij37qq2ao4o2sm3tesc.apps.googleusercontent.com',
+            callback: handleGoogleLogin,
+          });
+
+          // Render Nav button if container exists
+          const navBtnEl = document.getElementById('googleBtnNav');
+          if (navBtnEl) {
+            navBtnEl.innerHTML = '';
+            google.accounts.id.renderButton(navBtnEl, {
+              theme: 'outline',
+              size: 'medium',
+              shape: 'pill',
+              text: 'signin',
+            });
+          }
+
+          // Render Hero button if container exists
+          const heroBtnEl = document.getElementById('googleBtnHero');
+          if (heroBtnEl) {
+            heroBtnEl.innerHTML = '';
+            google.accounts.id.renderButton(heroBtnEl, {
+              theme: 'filled_blue',
+              size: 'large',
+              shape: 'pill',
+              text: 'continue_with',
+              width: 250,
+            });
+          }
+
+          // Render Final CTA button if container exists
+          const finalBtnEl = document.getElementById('googleBtnFinal');
+          if (finalBtnEl) {
+            finalBtnEl.innerHTML = '';
+            google.accounts.id.renderButton(finalBtnEl, {
+              theme: 'outline',
+              size: 'large',
+              shape: 'pill',
+              text: 'continue_with',
+              width: 250,
+            });
+          }
+
+          // Prompt One Tap
+          google.accounts.id.prompt();
+
+          setGoogleReady(true);
+          return true;
+        } catch (e) {
+          console.warn('Failed to load Google identity rendering:', e);
+        }
+      }
+      return false;
+    };
+
+    const initialized = initGoogle();
+    if (!initialized) {
+      checkInterval = setInterval(() => {
+        attempts++;
+        const initializedNow = initGoogle();
+        if (initializedNow || attempts >= 20) {
+          clearInterval(checkInterval);
+        }
+      }, 300);
+    }
+
+    return () => {
+      if (checkInterval) clearInterval(checkInterval);
+    };
+  }, []);
 
   return (
     <div className="landing">
@@ -68,9 +178,12 @@ export function LandingPage() {
             <a href="#security">Security</a>
             <a href="#templates">Templates</a>
           </nav>
-          <button className="landing-signin-sm" onClick={doGoogleSignIn} disabled={signingIn}>
-            <GoogleIcon size={16} /> Sign in
-          </button>
+          <div id="googleBtnNav" style={{ display: googleReady ? 'block' : 'none' }} />
+          {!googleReady && (
+            <button className="landing-signin-sm" onClick={doGoogleSignIn} disabled={signingIn}>
+              <GoogleIcon size={16} /> Sign in
+            </button>
+          )}
         </div>
       </header>
 
@@ -91,13 +204,16 @@ export function LandingPage() {
           </p>
 
           <div className="landing-cta hero-anim" style={{ animationDelay: '400ms' }}>
-            <button className="google-btn" onClick={doGoogleSignIn} disabled={signingIn}>
-              {signingIn ? (
-                <><span className="google-spinner" /> Signing in…</>
-              ) : (
-                <><GoogleIcon size={18} /> Continue with Google</>
-              )}
-            </button>
+            <div id="googleBtnHero" style={{ display: googleReady ? 'block' : 'none', height: 40 }} />
+            {!googleReady && (
+              <button className="google-btn" onClick={doGoogleSignIn} disabled={signingIn}>
+                {signingIn ? (
+                  <><span className="google-spinner" /> Signing in…</>
+                ) : (
+                  <><GoogleIcon size={18} /> Continue with Google</>
+                )}
+              </button>
+            )}
             <span className="landing-cta-note">Prototype — simulated sign-in, no account needed</span>
           </div>
 
@@ -177,9 +293,14 @@ export function LandingPage() {
         <Reveal>
           <h2 className="landing-h2" style={{ color: '#fff' }}>Ready to get organized?</h2>
           <p className="landing-final-sub">Jump in — it takes one click.</p>
-          <button className="google-btn light" onClick={doGoogleSignIn} disabled={signingIn}>
-            {signingIn ? <><span className="google-spinner dark" /> Signing in…</> : <><GoogleIcon size={18} /> Continue with Google <ArrowRight size={16} /></>}
-          </button>
+          <div style={{ display: googleReady ? 'inline-flex' : 'none', justifyContent: 'center', height: 40 }}>
+            <div id="googleBtnFinal" />
+          </div>
+          {!googleReady && (
+            <button className="google-btn light" onClick={doGoogleSignIn} disabled={signingIn}>
+              {signingIn ? <><span className="google-spinner dark" /> Signing in…</> : <><GoogleIcon size={18} /> Continue with Google <ArrowRight size={16} /></>}
+            </button>
+          )}
         </Reveal>
       </section>
 
