@@ -514,6 +514,7 @@ interface StoreState {
   updateDatabaseViewSorts: (databaseId: string, viewId: string, sorts: import('./types').DatabaseSortConfig[]) => void;
 
   _loadSeed: (data: ReturnType<typeof buildSeedData>) => void;
+  _syncPageToBackend: (id: string) => void;
 
   // Selectors
   getPage: (id: string) => Page | undefined;
@@ -573,13 +574,25 @@ export const useStore = create<StoreState>()(
 
       setIsServerOnline: (online) => set({ isServerOnline: online }),
 
+      _syncPageToBackend: (id) => {
+        const page = get().pages.find((p) => p.id === id);
+        if (page && api.getToken() && isUuid(id)) {
+          const matchedDb = page.databaseId ? get().databases.find((db) => db.id === page.databaseId) : undefined;
+          const contentStr = serializePageContent(page, matchedDb);
+          api.updateNote(id, page.title || 'Untitled', contentStr)
+            .catch((err) => console.error(`Failed to sync page ${id} to backend`, err));
+        }
+      },
+
       // Helper to replace temporary page IDs seamlessly once saved on backend
       _replacePageId: (tempId: string, realId: string) => {
+        let parentToSync: string | null = null;
         set((s) => {
           const pages = s.pages.map((p) => {
             let children = p.children;
             if (children.includes(tempId)) {
               children = children.map((c) => (c === tempId ? realId : c));
+              parentToSync = p.id;
             }
             let parentId = p.parentId;
             if (p.parentId === tempId) {
@@ -603,6 +616,9 @@ export const useStore = create<StoreState>()(
 
           return { pages, topLevelPageIds, activeView, visitHistory, favoriteOrder };
         });
+        if (parentToSync && isUuid(parentToSync)) {
+          get()._syncPageToBackend(parentToSync);
+        }
       },
 
       // Sync data with REST endpoints
@@ -619,8 +635,10 @@ export const useStore = create<StoreState>()(
           // 1. Upload unsynced local pages first (meaning they have temporary non-UUID IDs)
           const unsyncedPages = get().pages.filter((p) => !isUuid(p.id));
           if (unsyncedPages.length > 0) {
-            for (const localPage of unsyncedPages) {
+            for (const localPageSnapshot of unsyncedPages) {
               try {
+                const localPage = get().pages.find(p => p.id === localPageSnapshot.id);
+                if (!localPage) continue;
                 const matchedDb = localPage.databaseId ? get().databases.find((db) => db.id === localPage.databaseId) : undefined;
                 const contentStr = serializePageContent(localPage, matchedDb);
                 const created = await api.createNote(localPage.title || 'Untitled Page', contentStr);
@@ -628,7 +646,7 @@ export const useStore = create<StoreState>()(
                 // Replace the temporary ID in the local state with the backend-assigned UUID
                 get()._replacePageId(localPage.id, created.id);
               } catch (err) {
-                console.error(`Failed to upload local page "${localPage.title}" to backend:`, err);
+                console.error(`Failed to upload local page "${localPageSnapshot.title}" to backend:`, err);
               }
             }
           }
@@ -797,10 +815,14 @@ export const useStore = create<StoreState>()(
       },
 
       deletePage: (id) => {
+        let parentIdsToSync: string[] = [];
         set((s) => {
           const updated = s.pages.map((p) => {
             if (p.id === id) return { ...p, isDeleted: true, deletedAt: Date.now() };
-            if (p.children.includes(id)) return { ...p, children: p.children.filter((c) => c !== id) };
+            if (p.children.includes(id)) {
+              parentIdsToSync.push(p.id);
+              return { ...p, children: p.children.filter((c) => c !== id) };
+            }
             return p;
           });
           const newTopLevel = s.topLevelPageIds.filter((tid) => tid !== id);
@@ -808,6 +830,8 @@ export const useStore = create<StoreState>()(
           const newView: AppView = view.type === 'page' && view.id === id ? { type: 'home' } : view;
           return { pages: updated, topLevelPageIds: newTopLevel, activeView: newView };
         });
+        
+        parentIdsToSync.forEach(pId => get()._syncPageToBackend(pId));
 
         // Sync soft deletion to backend
         const page = get().pages.find((p) => p.id === id);
@@ -820,6 +844,7 @@ export const useStore = create<StoreState>()(
       },
 
       restorePage: (id) => {
+        let parentToSync: string | null = null;
         set((s) => {
           const page = s.pages.find((p) => p.id === id);
           if (!page) return s;
@@ -837,12 +862,15 @@ export const useStore = create<StoreState>()(
               topLevelPageIds: [id, ...s.topLevelPageIds],
             };
           }
+          parentToSync = parentId;
           return {
             pages: updated.map((p) =>
               p.id === parentId ? { ...p, children: [...p.children, id] } : p
             ),
           };
         });
+
+        if (parentToSync) get()._syncPageToBackend(parentToSync);
 
         // Sync restoration to backend
         const page = get().pages.find((p) => p.id === id);
@@ -898,10 +926,12 @@ export const useStore = create<StoreState>()(
       },
 
       movePage: (id, newParentId, _afterId) => {
+        let oldParentIdToSync: string | null = null;
         set((s) => {
           const page = s.pages.find((p) => p.id === id);
           if (!page) return s;
           const oldParentId = page.parentId;
+          oldParentIdToSync = oldParentId;
           let pages = s.pages.map((p) => {
             if (p.id === oldParentId) return { ...p, children: p.children.filter((c) => c !== id) };
             if (p.id === newParentId) return { ...p, children: [...p.children, id] };
@@ -913,6 +943,9 @@ export const useStore = create<StoreState>()(
           if (!newParentId) topLevelPageIds = [id, ...topLevelPageIds];
           return { pages, topLevelPageIds };
         });
+
+        if (oldParentIdToSync) get()._syncPageToBackend(oldParentIdToSync);
+        if (newParentId) get()._syncPageToBackend(newParentId);
 
         // Sync move to backend
         const page = get().pages.find((p) => p.id === id);
