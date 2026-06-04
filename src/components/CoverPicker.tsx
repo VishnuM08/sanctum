@@ -27,9 +27,16 @@ export function CoverPicker({ current, onChange, onClose }: Props) {
   const [tab, setTab] = useState<Tab>('images');
 
   return (
-    <>
-      <div style={{ position: 'fixed', inset: 0, zIndex: 49 }} onClick={onClose} />
-      <div className="cover-picker" style={{ zIndex: 50 }}>
+    <div className="cover-picker-overlay">
+      <div className="cover-picker-backdrop" onClick={onClose} />
+      <div className="cover-picker">
+        <div className="cover-picker-header">
+          <h3>Select Cover</h3>
+          <button className="cover-picker-close-btn" onClick={onClose} aria-label="Close cover picker">
+            &times;
+          </button>
+        </div>
+
         <div className="cover-picker-tabs">
           <button
             className={`cover-picker-tab ${tab === 'images' ? 'active' : ''}`}
@@ -90,6 +97,6 @@ export function CoverPicker({ current, onChange, onClose }: Props) {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
