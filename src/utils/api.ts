@@ -13,6 +13,7 @@ const getDefaultApiBase = () => {
         return `${protocol}//${parts.join('.')}/api`;
       }
     }
+    return `${protocol}//${hostname}:8080/api`;
   }
   return 'http://localhost:8080/api';
 };

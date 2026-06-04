@@ -609,6 +609,31 @@ export const useStore = create<StoreState>()(
       syncWithBackend: async () => {
         if (!api.getToken()) return;
         try {
+          const online = await api.checkServer();
+          set({ isServerOnline: online });
+          if (!online) {
+            console.warn('Backend server is offline. Skipping backend sync.');
+            return;
+          }
+
+          // 1. Upload unsynced local pages first (meaning they have temporary non-UUID IDs)
+          const unsyncedPages = get().pages.filter((p) => !isUuid(p.id));
+          if (unsyncedPages.length > 0) {
+            for (const localPage of unsyncedPages) {
+              try {
+                const matchedDb = localPage.databaseId ? get().databases.find((db) => db.id === localPage.databaseId) : undefined;
+                const contentStr = serializePageContent(localPage, matchedDb);
+                const created = await api.createNote(localPage.title || 'Untitled Page', contentStr);
+                
+                // Replace the temporary ID in the local state with the backend-assigned UUID
+                get()._replacePageId(localPage.id, created.id);
+              } catch (err) {
+                console.error(`Failed to upload local page "${localPage.title}" to backend:`, err);
+              }
+            }
+          }
+
+          // 2. Fetch the latest list from the backend
           const serverNotes = await api.getNotes();
           const parsedPages: Page[] = [];
           const parsedDatabases: Database[] = [];
@@ -695,6 +720,8 @@ export const useStore = create<StoreState>()(
 
         } catch (e) {
           console.error('Failed to sync with backend:', e);
+          const online = await api.checkServer();
+          set({ isServerOnline: online });
         }
       },
 
@@ -1531,7 +1558,17 @@ export const useStore = create<StoreState>()(
           state.vaultEntries = [];
           if (api.getToken()) {
             state.isAuthenticated = true;
-            state.syncWithBackend().catch(() => {});
+            // Async verify server status and sync if online
+            api.checkServer()
+              .then((online) => {
+                state.setIsServerOnline(online);
+                if (online) {
+                  state.syncWithBackend().catch(() => {});
+                }
+              })
+              .catch(() => {
+                state.setIsServerOnline(false);
+              });
           } else if (state.pages.length === 0) {
             const seed = buildSeedData();
             state._loadSeed(seed);

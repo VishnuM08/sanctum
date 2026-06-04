@@ -5,7 +5,7 @@ import {
   MoreHorizontal, Home, ChevronsLeft, ChevronsRight,
   Database, LayoutTemplate, CalendarDays, Bell, Lock,
   Globe, Zap, Upload, GripVertical, Eye, EyeOff,
-  Clock, ChevronDown, ShieldCheck, Bot, Sparkles,
+  Clock, ChevronDown, ShieldCheck, Bot, Sparkles, CloudOff,
 } from 'lucide-react';
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
@@ -57,6 +57,7 @@ export function Sidebar() {
   const favoriteOrder      = useStore((s) => s.favoriteOrder);
   const vaultInitialized   = useStore((s) => s.vaultMeta.initialized);
   const vaultUnlocked      = useStore((s) => s.vaultUnlocked);
+  const isServerOnline     = useStore((s) => s.isServerOnline);
   const { toast }          = useToast();
 
   const [trashOpen,    setTrashOpen]    = useState(false);
@@ -229,6 +230,12 @@ export function Sidebar() {
         style={{ width: sidebarCollapsed ? 0 : sidebarWidth }}
       >
         <div className="sidebar-inner">
+          {!isServerOnline && (
+            <div className="sidebar-offline-banner">
+              <CloudOff size={13} style={{ color: 'var(--warning)', marginRight: 6 }} />
+              <span>Offline Mode (Local-Only)</span>
+            </div>
+          )}
           {/* Workspace header */}
           <div className="workspace-header" onClick={() => navigateToSettings('workspace')}>
             <div 
