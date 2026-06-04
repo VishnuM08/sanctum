@@ -1815,3 +1815,8 @@ export const useStore = create<StoreState>()(
     }
   )
 );
+
+// Register global API unauthorized callback
+api.onUnauthorized(() => {
+  useStore.getState().signOut();
+});

@@ -33,7 +33,33 @@ let API_BASE = localStorage.getItem('vault-api-server-url') || getDefaultApiBase
 let isServerOnline = false;
 let checkPromise: Promise<boolean> | null = null;
 
+let onUnauthorizedCallback: (() => void) | null = null;
+
+async function authenticatedFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const token = api.getToken();
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...(options.headers || {}),
+  };
+  const res = await fetch(url, {
+    ...options,
+    headers,
+  });
+  if (res.status === 401 || res.status === 403) {
+    if (onUnauthorizedCallback) {
+      onUnauthorizedCallback();
+    }
+    throw new Error('UNAUTHORIZED');
+  }
+  return res;
+}
+
 export const api = {
+  onUnauthorized(callback: () => void) {
+    onUnauthorizedCallback = callback;
+  },
+
   getApiBase(): string {
     return API_BASE;
   },
@@ -167,81 +193,62 @@ export const api = {
 
   // Notes API
   async getNotes(): Promise<Note[]> {
-    const res = await fetch(`${API_BASE}/notes`, {
-      headers: this.getHeaders(),
-    });
-    if (res.status === 401 || res.status === 403) throw new Error('UNAUTHORIZED');
+    const res = await authenticatedFetch(`${API_BASE}/notes`);
     if (!res.ok) throw new Error('Failed to fetch notes');
     return res.json();
   },
 
   async createNote(title: string, content: string): Promise<Note> {
-    const res = await fetch(`${API_BASE}/notes`, {
+    const res = await authenticatedFetch(`${API_BASE}/notes`, {
       method: 'POST',
-      headers: this.getHeaders(),
       body: JSON.stringify({ title, content }),
     });
-    if (res.status === 401 || res.status === 403) throw new Error('UNAUTHORIZED');
     if (!res.ok) throw new Error('Failed to create note');
     return res.json();
   },
 
   async updateNote(id: string, title: string, content: string): Promise<Note> {
-    const res = await fetch(`${API_BASE}/notes/${id}`, {
+    const res = await authenticatedFetch(`${API_BASE}/notes/${id}`, {
       method: 'PUT',
-      headers: this.getHeaders(),
       body: JSON.stringify({ title, content }),
     });
-    if (res.status === 401 || res.status === 403) throw new Error('UNAUTHORIZED');
     if (!res.ok) throw new Error('Failed to update note');
     return res.json();
   },
 
   async deleteNote(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE}/notes/${id}`, {
+    const res = await authenticatedFetch(`${API_BASE}/notes/${id}`, {
       method: 'DELETE',
-      headers: this.getHeaders(),
     });
-    if (res.status === 401 || res.status === 403) throw new Error('UNAUTHORIZED');
     if (!res.ok) throw new Error('Failed to delete note');
   },
 
   // Vault API
   async getVaultEntries(): Promise<VaultEntry[]> {
-    const res = await fetch(`${API_BASE}/vault`, {
-      headers: this.getHeaders(),
-    });
-    if (res.status === 401 || res.status === 403) throw new Error('UNAUTHORIZED');
+    const res = await authenticatedFetch(`${API_BASE}/vault`);
     if (!res.ok) throw new Error('Failed to fetch vault items');
     return res.json();
   },
 
   async createVaultEntry(title: string, type: VaultEntry['type'], value: string, expiresAt?: string): Promise<VaultEntry> {
-    const res = await fetch(`${API_BASE}/vault`, {
+    const res = await authenticatedFetch(`${API_BASE}/vault`, {
       method: 'POST',
-      headers: this.getHeaders(),
       body: JSON.stringify({ title, type, value, expiresAt: expiresAt || null }),
     });
-    if (res.status === 401 || res.status === 403) throw new Error('UNAUTHORIZED');
     if (!res.ok) throw new Error('Failed to save vault item');
     return res.json();
   },
 
   async deleteVaultEntry(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE}/vault/${id}`, {
+    const res = await authenticatedFetch(`${API_BASE}/vault/${id}`, {
       method: 'DELETE',
-      headers: this.getHeaders(),
     });
-    if (res.status === 401 || res.status === 403) throw new Error('UNAUTHORIZED');
     if (!res.ok) throw new Error('Failed to delete vault item');
   },
 
   // Reminders API
   async getReminders(): Promise<Reminder[]> {
-    const res = await fetch(`${API_BASE}/reminders`, {
-      headers: this.getHeaders(),
-    });
-    if (res.status === 401 || res.status === 403) throw new Error('UNAUTHORIZED');
+    const res = await authenticatedFetch(`${API_BASE}/reminders`);
     if (!res.ok) throw new Error('Failed to fetch reminders');
     return res.json();
   },
@@ -267,9 +274,8 @@ export const api = {
       isoDate = date.toISOString();
     }
 
-    const res = await fetch(`${API_BASE}/reminders`, {
+    const res = await authenticatedFetch(`${API_BASE}/reminders`, {
       method: 'POST',
-      headers: this.getHeaders(),
       body: JSON.stringify({ title, remindAt: isoDate, context, noteId }),
     });
     if (!res.ok) throw new Error('Failed to create reminder');
@@ -277,35 +283,30 @@ export const api = {
   },
 
   async completeReminder(id: string): Promise<Reminder> {
-    const res = await fetch(`${API_BASE}/reminders/${id}/complete`, {
+    const res = await authenticatedFetch(`${API_BASE}/reminders/${id}/complete`, {
       method: 'PUT',
-      headers: this.getHeaders(),
     });
     if (!res.ok) throw new Error('Failed to complete reminder');
     return res.json();
   },
 
   async deleteReminder(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE}/reminders/${id}`, {
+    const res = await authenticatedFetch(`${API_BASE}/reminders/${id}`, {
       method: 'DELETE',
-      headers: this.getHeaders(),
     });
     if (!res.ok) throw new Error('Failed to delete reminder');
   },
 
   // Agent API
   async getAgentLogs(): Promise<AgentLog[]> {
-    const res = await fetch(`${API_BASE}/agent/logs`, {
-      headers: this.getHeaders(),
-    });
+    const res = await authenticatedFetch(`${API_BASE}/agent/logs`);
     if (!res.ok) throw new Error('Failed to fetch agent logs');
     return res.json();
   },
 
   async getDailyDigest(): Promise<string> {
-    const res = await fetch(`${API_BASE}/agent/digest`, {
+    const res = await authenticatedFetch(`${API_BASE}/agent/digest`, {
       method: 'POST',
-      headers: this.getHeaders(),
     });
     if (!res.ok) throw new Error('Failed to build daily digest');
     const data = await res.json();
@@ -313,9 +314,8 @@ export const api = {
   },
 
   async chatWithAgent(message: string): Promise<string> {
-    const res = await fetch(`${API_BASE}/agent/chat`, {
+    const res = await authenticatedFetch(`${API_BASE}/agent/chat`, {
       method: 'POST',
-      headers: this.getHeaders(),
       body: JSON.stringify({ message }),
     });
     if (!res.ok) throw new Error('Failed to query agent');
@@ -324,9 +324,8 @@ export const api = {
   },
 
   async generateText(prompt: string, systemPrompt?: string): Promise<string> {
-    const res = await fetch(`${API_BASE}/agent/generate`, {
+    const res = await authenticatedFetch(`${API_BASE}/agent/generate`, {
       method: 'POST',
-      headers: this.getHeaders(),
       body: JSON.stringify({ prompt, systemPrompt }),
     });
     if (!res.ok) throw new Error('Failed to generate text from local AI');
