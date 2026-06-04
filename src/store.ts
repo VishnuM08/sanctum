@@ -510,7 +510,7 @@ interface StoreState {
   setVaultAutoLock: (minutes: number) => void;
 
   // Auth actions
-  signIn: (profile?: Partial<UserProfile>, idToken?: string) => void;
+  signIn: (profile?: Partial<UserProfile>, idToken?: string) => Promise<void>;
   emailLogin: (email: string, password: string) => Promise<{ otpRequired?: boolean; email?: string }>;
   verifyOtp: (email: string, code: string) => Promise<void>;
   emailRegister: (name: string, email: string, password: string) => Promise<void>;
@@ -1693,23 +1693,19 @@ export const useStore = create<StoreState>()(
 
       // ── Auth actions ──────────────────────────────────────────────────────
 
-      signIn: (profile, idToken) => {
+      signIn: async (profile, idToken) => {
+        const tokenToUse = idToken || "mock_google_id_token_vishnu";
+        const data = await api.googleLogin(tokenToUse);
+        api.setToken(data.token);
+
         set((s) => ({
           isAuthenticated: true,
-          user: profile ? { ...s.user, ...profile } : s.user,
+          user: profile
+            ? { ...s.user, ...profile, id: data.id }
+            : { ...s.user, id: data.id },
         }));
-        
-        // Auto sign-in to backend on OAuth callback
-        (async () => {
-          try {
-            const tokenToUse = idToken || "mock_google_id_token_vishnu";
-            const data = await api.googleLogin(tokenToUse);
-            api.setToken(data.token);
-            await get().syncWithBackend();
-          } catch (e) {
-            console.error('Failed to login to backend during signIn:', e);
-          }
-        })();
+
+        await get().syncWithBackend();
       },
 
       emailLogin: async (email, password) => {
