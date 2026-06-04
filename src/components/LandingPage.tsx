@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useStore } from '../store';
+import { Capacitor } from '@capacitor/core';
+import { api } from '../utils/api';
 import {
   GoogleIcon, AppMockup, BrandLogo,
   EditorArt, DatabaseArt, CalendarArt, VaultArt, AiArt, TemplatesArt,
 } from './LandingArt';
 import {
   PenLine, Database, CalendarDays, ShieldCheck, Sparkles,
-  LayoutTemplate, Check, ArrowRight,
+  LayoutTemplate, Check, ArrowRight, Settings, X, Wifi, RefreshCw
 } from 'lucide-react';
 
 // ── Scroll-reveal wrapper (IntersectionObserver) ─────────────────────────────
@@ -58,6 +60,60 @@ export function LandingPage() {
   const [otpCode, setOtpCode] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
+
+  // Server connection configuration state
+  const [showServerModal, setShowServerModal] = useState(false);
+  const [serverUrl, setServerUrl] = useState('');
+  const [serverStatus, setServerStatus] = useState<'idle' | 'checking' | 'online' | 'offline'>('idle');
+  const [serverStatusDetails, setServerStatusDetails] = useState('');
+
+  const handleOpenServerModal = () => {
+    setServerUrl(api.getApiBase());
+    setServerStatus('idle');
+    setServerStatusDetails('');
+    setShowServerModal(true);
+  };
+
+  const handleTestConnection = async () => {
+    setServerStatus('checking');
+    setServerStatusDetails('Attempting to connect...');
+    
+    // Temporarily save base URL to api to test it (without writing to localStorage)
+    const originalBase = api.getApiBase();
+    
+    try {
+      let formattedUrl = serverUrl.trim();
+      if (formattedUrl && !/^https?:\/\//i.test(formattedUrl)) {
+        formattedUrl = 'http://' + formattedUrl;
+      }
+      
+      api.setApiBase(formattedUrl);
+      const isOnline = await api.checkServer();
+      
+      if (isOnline) {
+        setServerStatus('online');
+        setServerStatusDetails('Connection successful! Server is online and responding.');
+      } else {
+        setServerStatus('offline');
+        setServerStatusDetails('Failed to connect. Please check URL, server port, or network firewall.');
+      }
+    } catch (err) {
+      setServerStatus('offline');
+      setServerStatusDetails('Error connecting: ' + (err as Error).message);
+    } finally {
+      // Revert base URL so we don't accidentally save an untested one unless saved
+      api.setApiBase(originalBase);
+    }
+  };
+
+  const handleSaveConnection = () => {
+    let formattedUrl = serverUrl.trim();
+    if (formattedUrl && !/^https?:\/\//i.test(formattedUrl)) {
+      formattedUrl = 'http://' + formattedUrl;
+    }
+    api.setApiBase(formattedUrl);
+    setShowServerModal(false);
+  };
 
   const handleVaultAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -266,20 +322,30 @@ export function LandingPage() {
           </p>
 
           <div className="landing-auth-card hero-anim" style={{ animationDelay: '400ms' }}>
-            <div className="landing-auth-tabs">
+            <div className="landing-auth-header" style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+              <div className="landing-auth-tabs" style={{ flex: 1, margin: 0 }}>
+                <button
+                  type="button"
+                  className={`landing-auth-tab ${authMethod === 'google' ? 'active' : ''}`}
+                  onClick={() => { setAuthMethod('google'); setAuthError(null); setOtpStep(false); }}
+                >
+                  Google Login
+                </button>
+                <button
+                  type="button"
+                  className={`landing-auth-tab ${authMethod === 'vault' ? 'active' : ''}`}
+                  onClick={() => { setAuthMethod('vault'); setAuthError(null); }}
+                >
+                  Vault Account
+                </button>
+              </div>
               <button
                 type="button"
-                className={`landing-auth-tab ${authMethod === 'google' ? 'active' : ''}`}
-                onClick={() => { setAuthMethod('google'); setAuthError(null); setOtpStep(false); }}
+                className="server-config-btn"
+                onClick={handleOpenServerModal}
+                title="Configure Backend Server URL"
               >
-                Google Login
-              </button>
-              <button
-                type="button"
-                className={`landing-auth-tab ${authMethod === 'vault' ? 'active' : ''}`}
-                onClick={() => { setAuthMethod('vault'); setAuthError(null); }}
-              >
-                Vault Account
+                <Settings size={18} />
               </button>
             </div>
 
@@ -501,6 +567,87 @@ export function LandingPage() {
         <div className="landing-brand"><BrandLogo size={22} /><span>Sanctum</span></div>
         <span className="landing-footer-note">Sanctum · Secure AI-Powered Organizer</span>
       </footer>
+
+      {showServerModal && (
+        <div className="server-modal-overlay" onClick={() => setShowServerModal(false)}>
+          <div className="server-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="server-modal-header">
+              <h3 className="server-modal-title">Server Connection</h3>
+              <button className="server-modal-close" onClick={() => setShowServerModal(false)}>
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div className="server-modal-body">
+              <div className="server-input-group">
+                <label className="server-input-label">Backend API Server URL</label>
+                <div className="server-input-wrapper">
+                  <input
+                    type="text"
+                    className="server-url-input"
+                    placeholder={Capacitor.isNativePlatform() ? "e.g., http://192.168.1.50:8080/api" : "e.g., http://localhost:8080/api"}
+                    value={serverUrl}
+                    onChange={(e) => setServerUrl(e.target.value)}
+                  />
+                </div>
+                {Capacitor.isNativePlatform() && serverUrl.trim() === '' && (
+                  <span style={{ fontSize: '11px', color: '#f59e0b', marginTop: '4px' }}>
+                    ⚠️ On mobile devices, a custom backend IP/domain is required to sync data with your Ubuntu server.
+                  </span>
+                )}
+              </div>
+
+              {(serverStatus !== 'idle' || api.getApiBase()) && (
+                <div className="server-status-indicator">
+                  <div className={`status-indicator-dot ${
+                    serverStatus === 'checking' ? 'status-dot-checking' :
+                    serverStatus === 'online' ? 'status-dot-online' :
+                    serverStatus === 'offline' ? 'status-dot-offline' :
+                    'status-dot-online'
+                  }`} />
+                  <div className="server-status-text">
+                    <span className="server-status-label">Connection Status</span>
+                    <span className="server-status-value">
+                      {serverStatus === 'checking' ? 'Testing connection...' :
+                       serverStatus === 'online' ? 'Online' :
+                       serverStatus === 'offline' ? 'Offline / Unreachable' :
+                       'Configured'}
+                    </span>
+                    {serverStatusDetails && (
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        {serverStatusDetails}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              <div className="server-action-row">
+                <button
+                  type="button"
+                  className="server-modal-btn server-btn-secondary"
+                  onClick={handleTestConnection}
+                  disabled={serverStatus === 'checking'}
+                >
+                  {serverStatus === 'checking' ? (
+                    <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                  ) : (
+                    <Wifi size={14} />
+                  )}
+                  Test Connection
+                </button>
+                <button
+                  type="button"
+                  className="server-modal-btn server-btn-primary"
+                  onClick={handleSaveConnection}
+                >
+                  Save Connection
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

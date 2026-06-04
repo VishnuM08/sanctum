@@ -49,6 +49,8 @@ interface SerializedPage {
   snapshots?: PageSnapshot[];
   tags?: string[];
   aiSummary?: string;
+  position?: number;
+  favoritePosition?: number;
   database?: Database; // Nested database schema + rows if this page is a database view
 }
 
@@ -74,6 +76,8 @@ function serializePageContent(page: Page, database?: Database): string {
     snapshots: page.snapshots,
     tags: page.tags,
     aiSummary: page.aiSummary,
+    position: page.position,
+    favoritePosition: page.favoritePosition,
     database: database,
   };
   return JSON.stringify(data);
@@ -140,6 +144,8 @@ function deserializePageContent(
         snapshots: data.snapshots,
         tags: data.tags ?? backendTags ?? [],
         aiSummary: data.aiSummary ?? backendAiSummary ?? '',
+        position: data.position,
+        favoritePosition: data.favoritePosition,
         createdAt: backendCreatedAt || Date.now(),
         updatedAt: backendUpdatedAt || Date.now(),
       };
@@ -687,10 +693,25 @@ export const useStore = create<StoreState>()(
 
           const topLevelPageIds = parsedPages
             .filter((p) => !p.parentId && !p.isDeleted)
-            .sort((a, b) => b.createdAt - a.createdAt)
+            .sort((a, b) => {
+              const posA = a.position ?? 0;
+              const posB = b.position ?? 0;
+              if (posA !== posB) return posA - posB;
+              return b.createdAt - a.createdAt;
+            })
             .map((p) => p.id);
 
-          set({ pages: parsedPages, databases: parsedDatabases, topLevelPageIds });
+          const favoriteOrder = parsedPages
+            .filter((p) => p.isFavorite && !p.isDeleted)
+            .sort((a, b) => {
+              const posA = a.favoritePosition ?? 0;
+              const posB = b.favoritePosition ?? 0;
+              if (posA !== posB) return posA - posB;
+              return b.createdAt - a.createdAt;
+            })
+            .map((p) => p.id);
+
+          set({ pages: parsedPages, databases: parsedDatabases, topLevelPageIds, favoriteOrder });
 
           // Sync reminders
           try {
@@ -1216,7 +1237,33 @@ export const useStore = create<StoreState>()(
       setShortcutsOpen: (open) => set({ shortcutsOpen: open }),
       setAiKey: (key) => set({ aiKey: key }),
       logVisit: (id) => set((s) => ({ visitHistory: [id, ...s.visitHistory.filter((v) => v !== id)].slice(0, 8) })),
-      reorderTopLevelPages: (newOrder) => set({ topLevelPageIds: newOrder }),
+      reorderTopLevelPages: (newOrder) => {
+        set({ topLevelPageIds: newOrder });
+
+        const updatedPages = get().pages.map((p) => {
+          if (!p.parentId && !p.isDeleted) {
+            const idx = newOrder.indexOf(p.id);
+            if (idx !== -1) {
+              return { ...p, position: idx };
+            }
+          }
+          return p;
+        });
+
+        set({ pages: updatedPages });
+
+        if (api.getToken()) {
+          newOrder.forEach((id) => {
+            const page = updatedPages.find((p) => p.id === id);
+            if (page && isUuid(id)) {
+              const matchedDb = page.databaseId ? get().databases.find((db) => db.id === page.databaseId) : undefined;
+              const contentStr = serializePageContent(page, matchedDb);
+              api.updateNote(id, page.title || 'Untitled', contentStr)
+                .catch((err) => console.error('Failed to sync reordered top level page position:', err));
+            }
+          });
+        }
+      },
 
       reorderChildren: (parentId, newOrder) => {
         set((s) => ({
@@ -1234,7 +1281,33 @@ export const useStore = create<StoreState>()(
         }
       },
 
-      reorderFavorites: (newOrder) => set({ favoriteOrder: newOrder }),
+      reorderFavorites: (newOrder) => {
+        set({ favoriteOrder: newOrder });
+
+        const updatedPages = get().pages.map((p) => {
+          if (p.isFavorite && !p.isDeleted) {
+            const idx = newOrder.indexOf(p.id);
+            if (idx !== -1) {
+              return { ...p, favoritePosition: idx };
+            }
+          }
+          return p;
+        });
+
+        set({ pages: updatedPages });
+
+        if (api.getToken()) {
+          newOrder.forEach((id) => {
+            const page = updatedPages.find((p) => p.id === id);
+            if (page && isUuid(id)) {
+              const matchedDb = page.databaseId ? get().databases.find((db) => db.id === page.databaseId) : undefined;
+              const contentStr = serializePageContent(page, matchedDb);
+              api.updateNote(id, page.title || 'Untitled', contentStr)
+                .catch((err) => console.error('Failed to sync reordered favorite page position:', err));
+            }
+          });
+        }
+      },
 
       setPagePrivate: (id, isPrivate) => {
         set((s) => ({ pages: s.pages.map((p) => p.id === id ? { ...p, isPrivate } : p) }));

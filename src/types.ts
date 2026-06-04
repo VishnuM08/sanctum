@@ -151,6 +151,8 @@ export interface Page {
   snapshots?: PageSnapshot[];   // version history
   tags?: string[];              // smart tags
   aiSummary?: string;           // one-line AI summary
+  position?: number;            // top-level manual order index
+  favoritePosition?: number;   // favorite list manual order index
   createdAt: number;
   updatedAt: number;
 }

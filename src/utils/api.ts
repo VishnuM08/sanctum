@@ -1,7 +1,15 @@
 import { Note, VaultEntry, Reminder, AgentLog, Settings } from '../types';
+import { Capacitor } from '@capacitor/core';
 
 const getDefaultApiBase = () => {
   if (typeof window !== 'undefined') {
+    // On native mobile platforms (Android/iOS), window.location.hostname is always 'localhost'.
+    // If we connect to localhost:8080, it points back to the mobile device itself, where no backend runs.
+    // Hence we return an empty string to prompt the user to configure their real Ubuntu server domain or IP.
+    if (Capacitor.isNativePlatform()) {
+      return '';
+    }
+
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
     
@@ -37,12 +45,16 @@ export const api = {
 
   // Check if backend server is available
   async checkServer(): Promise<boolean> {
+    if (!API_BASE || API_BASE.trim() === '') {
+      isServerOnline = false;
+      return false;
+    }
     if (checkPromise) return checkPromise;
 
     checkPromise = (async () => {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 1500); // 1.5s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s timeout for connection testing
 
         // Ping the auth/me endpoint (will return 401 if online, or network error if offline)
         const response = await fetch(`${API_BASE}/auth/me`, {

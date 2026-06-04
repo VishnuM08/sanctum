@@ -265,6 +265,15 @@ export function PageView({ pageId }: Props) {
         </div>
       )}
 
+      {/* Cover Picker Overlay (placed at top level to be absolute/fixed relative to screen) */}
+      {coverPickerOpen && (
+        <CoverPicker
+          current={page.cover}
+          onChange={(cover) => { updatePage(page.id, { cover }); setCoverPickerOpen(false); }}
+          onClose={() => setCoverPickerOpen(false)}
+        />
+      )}
+
       <div className="page-scroll">
         {/* Cover */}
         {page.cover && (
@@ -282,14 +291,6 @@ export function PageView({ pageId }: Props) {
         )}
 
         <div className={containerClass}>
-          {coverPickerOpen && (
-            <CoverPicker
-              current={page.cover}
-              onChange={(cover) => { updatePage(page.id, { cover }); setCoverPickerOpen(false); }}
-              onClose={() => setCoverPickerOpen(false)}
-            />
-          )}
-
           {/* Lock banner */}
           {page.isLocked && (
             <div className="lock-banner">
