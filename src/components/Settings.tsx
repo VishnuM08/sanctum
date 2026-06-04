@@ -322,11 +322,19 @@ function ConnectionsSection() {
         formattedUrl = 'http://' + formattedUrl;
       }
       
+      const originalUrl = api.getApiBase();
+      const hasChanged = originalUrl !== formattedUrl;
+
       api.setApiBase(formattedUrl);
       
-      // Trigger a sync instantly
-      await syncWithBackend();
-      alert('Backend server URL saved and sync triggered successfully!');
+      if (hasChanged) {
+        useStore.getState().signOut();
+        alert('Server URL updated successfully! Your previous session is invalid on this server. Please sign in to your account on the new server to synchronize your data.');
+      } else {
+        // Trigger a sync instantly
+        await syncWithBackend();
+        alert('Backend server URL saved and sync triggered successfully!');
+      }
     } catch (err: any) {
       alert('Saved but failed to sync: ' + err.message);
     } finally {

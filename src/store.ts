@@ -658,7 +658,17 @@ export const useStore = create<StoreState>()(
           }
 
           // 2. Fetch the latest list from the backend
-          const serverNotes = await api.getNotes();
+          let serverNotes: Note[] = [];
+          try {
+            serverNotes = await api.getNotes();
+          } catch (err: any) {
+            if (err.message === 'UNAUTHORIZED') {
+              console.warn('Backend rejected session token with 401. Logging out.');
+              get().signOut();
+              return;
+            }
+            throw err;
+          }
           const parsedPages: Page[] = [];
           const parsedDatabases: Database[] = [];
 

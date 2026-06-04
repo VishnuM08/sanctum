@@ -170,6 +170,7 @@ export const api = {
     const res = await fetch(`${API_BASE}/notes`, {
       headers: this.getHeaders(),
     });
+    if (res.status === 401) throw new Error('UNAUTHORIZED');
     if (!res.ok) throw new Error('Failed to fetch notes');
     return res.json();
   },
@@ -180,6 +181,7 @@ export const api = {
       headers: this.getHeaders(),
       body: JSON.stringify({ title, content }),
     });
+    if (res.status === 401) throw new Error('UNAUTHORIZED');
     if (!res.ok) throw new Error('Failed to create note');
     return res.json();
   },
@@ -190,6 +192,7 @@ export const api = {
       headers: this.getHeaders(),
       body: JSON.stringify({ title, content }),
     });
+    if (res.status === 401) throw new Error('UNAUTHORIZED');
     if (!res.ok) throw new Error('Failed to update note');
     return res.json();
   },
@@ -199,6 +202,7 @@ export const api = {
       method: 'DELETE',
       headers: this.getHeaders(),
     });
+    if (res.status === 401) throw new Error('UNAUTHORIZED');
     if (!res.ok) throw new Error('Failed to delete note');
   },
 
@@ -207,6 +211,7 @@ export const api = {
     const res = await fetch(`${API_BASE}/vault`, {
       headers: this.getHeaders(),
     });
+    if (res.status === 401) throw new Error('UNAUTHORIZED');
     if (!res.ok) throw new Error('Failed to fetch vault items');
     return res.json();
   },
@@ -217,6 +222,7 @@ export const api = {
       headers: this.getHeaders(),
       body: JSON.stringify({ title, type, value, expiresAt: expiresAt || null }),
     });
+    if (res.status === 401) throw new Error('UNAUTHORIZED');
     if (!res.ok) throw new Error('Failed to save vault item');
     return res.json();
   },
@@ -226,6 +232,7 @@ export const api = {
       method: 'DELETE',
       headers: this.getHeaders(),
     });
+    if (res.status === 401) throw new Error('UNAUTHORIZED');
     if (!res.ok) throw new Error('Failed to delete vault item');
   },
 
@@ -234,6 +241,7 @@ export const api = {
     const res = await fetch(`${API_BASE}/reminders`, {
       headers: this.getHeaders(),
     });
+    if (res.status === 401) throw new Error('UNAUTHORIZED');
     if (!res.ok) throw new Error('Failed to fetch reminders');
     return res.json();
   },

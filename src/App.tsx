@@ -116,6 +116,33 @@ export default function App() {
     body.classList.add(`density-${settings.density ?? 'default'}`);
   }, [settings.density]);
 
+  // Automatic silent background synchronization on window focus and every 20 seconds
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const autoSync = () => {
+      useStore.getState().syncWithBackend().catch(() => {});
+    };
+
+    // 1. Sync on window focus / tab visibility change
+    window.addEventListener('focus', autoSync);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        autoSync();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // 2. Periodic background poll (every 20 seconds)
+    const intervalId = setInterval(autoSync, 20000);
+
+    return () => {
+      window.removeEventListener('focus', autoSync);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(intervalId);
+    };
+  }, [isAuthenticated]);
+
   // Global keyboard shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     const meta = e.metaKey || e.ctrlKey;

@@ -167,6 +167,14 @@ export function LandingPage() {
     signInRef.current = signIn;
   }, [signIn]);
 
+  useEffect(() => {
+    // On native mobile devices, if no custom server URL has been set,
+    // automatically pop open the Server Connection dialog to guide them.
+    if (Capacitor.isNativePlatform() && api.getApiBase() === '') {
+      handleOpenServerModal();
+    }
+  }, []);
+
   const handleGoogleLogin = async (response: any) => {
     setSigningIn(true);
     try {
