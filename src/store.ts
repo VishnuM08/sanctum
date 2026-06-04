@@ -11,6 +11,7 @@ import {
   encryptString, decryptString,
 } from './utils/vaultCrypto';
 import { api } from './utils/api';
+import coverMountains from './assets/notion/cover_mountains.png';
 
 /**
  * Helper to check if an ID is a valid standard UUID.
@@ -258,6 +259,7 @@ function buildSeedData() {
       id: gettingStartedId,
       title: 'Getting Started',
       icon: '👋',
+      cover: { type: 'url', value: coverMountains, position: 50 },
       content: gettingStartedContent,
       isFavorite: true,
       isExpanded: true,
@@ -267,6 +269,7 @@ function buildSeedData() {
       id: quickStartId,
       title: 'Quick Start Guide',
       icon: '🚀',
+      cover: { type: 'gradient', value: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', position: 50 },
       parentId: gettingStartedId,
       content: {
         type: 'doc',
@@ -280,6 +283,7 @@ function buildSeedData() {
       id: shortcutsId,
       title: 'Keyboard Shortcuts',
       icon: '⌨️',
+      cover: { type: 'gradient', value: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)', position: 50 },
       parentId: gettingStartedId,
       content: {
         type: 'doc',
@@ -292,6 +296,7 @@ function buildSeedData() {
       id: projectsId,
       title: 'My Projects',
       icon: '📁',
+      cover: { type: 'gradient', value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', position: 50 },
       isExpanded: true,
       children: [websiteId, marketingId],
     }),
@@ -299,6 +304,7 @@ function buildSeedData() {
       id: websiteId,
       title: 'Website Redesign',
       icon: '🌐',
+      cover: { type: 'gradient', value: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', position: 50 },
       parentId: projectsId,
       databaseId: taskDbId,
     }),
@@ -306,6 +312,7 @@ function buildSeedData() {
       id: marketingId,
       title: 'Marketing Campaign',
       icon: '📣',
+      cover: { type: 'gradient', value: 'linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)', position: 50 },
       parentId: projectsId,
       content: {
         type: 'doc',
@@ -318,6 +325,7 @@ function buildSeedData() {
       id: personalId,
       title: 'Personal',
       icon: '🏠',
+      cover: { type: 'gradient', value: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', position: 50 },
       isExpanded: true,
       children: [readingId, goalsId],
     }),
@@ -325,6 +333,7 @@ function buildSeedData() {
       id: readingId,
       title: 'Reading List',
       icon: '📚',
+      cover: { type: 'gradient', value: 'linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%)', position: 50 },
       parentId: personalId,
       databaseId: bookDbId,
     }),
@@ -332,6 +341,7 @@ function buildSeedData() {
       id: goalsId,
       title: 'Goals 2025',
       icon: '🎯',
+      cover: { type: 'gradient', value: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)', position: 50 },
       parentId: personalId,
       isFavorite: true,
       content: {

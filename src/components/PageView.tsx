@@ -268,7 +268,12 @@ export function PageView({ pageId }: Props) {
       <div className="page-scroll">
         {/* Cover */}
         {page.cover && (
-          <div className="page-cover" style={{ background: page.cover.value }}>
+          <div 
+            className="page-cover" 
+            style={{ 
+              background: page.cover.type === 'url' ? `url(${page.cover.value}) center/cover no-repeat` : page.cover.value 
+            }}
+          >
             <div className="page-cover-actions">
               <button className="cover-action-btn" onClick={() => setCoverPickerOpen(true)}>Change cover</button>
               <button className="cover-action-btn" onClick={() => updatePage(page.id, { cover: undefined })}>Remove</button>
@@ -296,8 +301,25 @@ export function PageView({ pageId }: Props) {
 
           {/* Page header */}
           <div className="page-header">
-            {page.icon ? (
-              <div style={{ position: 'relative', display: 'inline-block' }}>
+            {/* Actions row for adding icon/cover if missing */}
+            {(!page.icon || !page.cover) && (
+              <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                {!page.icon && (
+                  <button className="page-header-add-btn" onClick={() => { updatePage(page.id, { icon: 'notion_page' }); setEmojiPickerOpen(true); }}>
+                    <NotionIcon icon="notion_happy" size="14px" style={{ marginRight: 4 }} /> Add icon
+                  </button>
+                )}
+                {!page.cover && (
+                  <button className="page-header-add-btn" onClick={() => setCoverPickerOpen(true)}>
+                    🖼️ Add cover
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Display active icon button */}
+            {page.icon && (
+              <div style={{ position: 'relative', display: 'inline-block', marginBottom: 12 }}>
                 <button className="page-icon-btn" onClick={() => setEmojiPickerOpen((v) => !v)}>
                   <NotionIcon icon={page.icon} size="1.2em" style={{ display: 'block' }} />
                 </button>
@@ -309,17 +331,6 @@ export function PageView({ pageId }: Props) {
                       onRemove={() => { updatePage(page.id, { icon: '' }); setEmojiPickerOpen(false); }}
                     />
                   </div>
-                )}
-              </div>
-            ) : (
-              <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
-                <button className="page-header-add-btn" onClick={() => { updatePage(page.id, { icon: 'notion_page' }); setEmojiPickerOpen(true); }}>
-                  <NotionIcon icon="notion_happy" size="14px" style={{ marginRight: 4 }} /> Add icon
-                </button>
-                {!page.cover && (
-                  <button className="page-header-add-btn" onClick={() => setCoverPickerOpen(true)}>
-                    🖼️ Add cover
-                  </button>
                 )}
               </div>
             )}
