@@ -1,5 +1,6 @@
 package com.vault.service.agent;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,6 +22,7 @@ public class IntentExtractorDto {
     @AllArgsConstructor
     public static class ReminderExtraction {
         private String title;
+        @JsonProperty("remind_at")
         private String remindAt; // ISO 8601 representation
     }
 
