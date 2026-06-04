@@ -1,8 +1,10 @@
-import { Home, Search, Settings, Plus } from 'lucide-react';
+import { Home, Search, Settings, Plus, Menu } from 'lucide-react';
 import { useStore } from '../store';
 
 export function MobileBottomNav() {
   const activeView = useStore((s) => s.activeView);
+  const sidebarCollapsed = useStore((s) => s.sidebarCollapsed);
+  const toggleSidebar = useStore((s) => s.toggleSidebar);
   const navigate = useStore((s) => s.navigate);
   const navigateToSettings = useStore((s) => s.navigateToSettings);
   const setSearchOpen = useStore((s) => s.setSearchOpen);
@@ -30,8 +32,16 @@ export function MobileBottomNav() {
         className="mobile-bottom-nav-item"
         onClick={() => createPage()}
       >
-        <Plus size={22} />
+        <Plus size={22} style={{ background: 'var(--accent)', color: 'white', borderRadius: '50%', padding: '2px' }} />
         <span>New</span>
+      </button>
+
+      <button
+        className={`mobile-bottom-nav-item ${!sidebarCollapsed ? 'active' : ''}`}
+        onClick={toggleSidebar}
+      >
+        <Menu size={20} />
+        <span>Workspace</span>
       </button>
 
       <button

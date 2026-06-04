@@ -3,7 +3,7 @@ import {
   MoreHorizontal, Share2, Star, Maximize2, ChevronRight,
   Trash2, Copy, Lock, Unlock, Globe, Type, AlignLeft,
   Link, Download, ExternalLink, History, Search, FileCode,
-  CalendarDays, BookMarked,
+  CalendarDays, BookMarked, Menu
 } from 'lucide-react';
 import { useStore } from '../store';
 import { Editor } from './Editor';
@@ -32,6 +32,7 @@ export function PageView({ pageId }: Props) {
   const createPage    = useStore((s) => s.createPage);
   const zenMode       = useStore((s) => s.zenMode);
   const toggleZenMode = useStore((s) => s.toggleZenMode);
+  const toggleSidebar = useStore((s) => s.toggleSidebar);
   const allPages       = useStore((s) => s.pages);
   const settings       = useStore((s) => s.settings);
   const saveSnapshot   = useStore((s) => s.saveSnapshot);
@@ -151,6 +152,9 @@ export function PageView({ pageId }: Props) {
       {/* Topbar (hidden in zen mode) */}
       {!zenMode && (
         <div className="topbar">
+          <button className="topbar-menu-btn" onClick={toggleSidebar} title="Toggle sidebar">
+            <Menu size={16} />
+          </button>
           <div className="topbar-breadcrumb">
             {breadcrumb.map((bp, i) => (
               <span key={bp.id} style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>

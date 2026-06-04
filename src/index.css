@@ -4737,3 +4737,29 @@ mark.find-highlight-active { background: rgba(255, 159, 0, 0.6); border-radius: 
   filter: invert(1);
   mix-blend-mode: screen;
 }
+
+/* ── Mobile menu button styles ───────────────────────────────────────────── */
+.topbar-menu-btn {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .topbar-menu-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    margin-right: 8px;
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    transition: background var(--transition-fast), color var(--transition-fast);
+  }
+  .topbar-menu-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+}
+

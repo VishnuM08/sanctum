@@ -3,12 +3,20 @@ import { Note, VaultEntry, Reminder, AgentLog, Settings } from '../types';
 const getDefaultApiBase = () => {
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
-    if (hostname === 'sanctum.theaignite.app') {
-      return 'https://sanctum-api.theaignite.app/api';
+    const protocol = window.location.protocol;
+    
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1' && !/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+      const parts = hostname.split('.');
+      if (parts.length >= 2) {
+        // Prepend -api to the first subdomain segment (e.g., sanctum.domain.com -> sanctum-api.domain.com)
+        parts[0] = `${parts[0]}-api`;
+        return `${protocol}//${parts.join('.')}/api`;
+      }
     }
   }
   return 'http://localhost:8080/api';
 };
+
 
 let API_BASE = localStorage.getItem('vault-api-server-url') || getDefaultApiBase();
 

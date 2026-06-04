@@ -184,7 +184,7 @@ export function Sidebar() {
       )}
 
       <aside
-        className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}
+        className={`sidebar ${sidebarCollapsed ? 'collapsed' : 'mobile-open'}`}
         style={{ width: sidebarCollapsed ? 0 : sidebarWidth }}
       >
         <div className="sidebar-inner">

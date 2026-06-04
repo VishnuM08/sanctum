@@ -24,8 +24,18 @@ export default function App() {
   const setShortcutsOpen = useStore((s) => s.setShortcutsOpen);
   const toggleZenMode    = useStore((s) => s.toggleZenMode);
   const updateSettings   = useStore((s) => s.updateSettings);
+  const sidebarCollapsed = useStore((s) => s.sidebarCollapsed);
+  const toggleSidebar    = useStore((s) => s.toggleSidebar);
   const createPage       = useStore((s) => s.createPage);
   void createPage; // used in MorningDigest via store directly
+
+  // Collapse sidebar by default on mobile screens
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+      useStore.setState({ sidebarCollapsed: true });
+    }
+  }, []);
+
 
   // Apply theme class
   useEffect(() => {
@@ -150,6 +160,9 @@ export default function App() {
   return (
     <div className={`app ${zenMode ? 'zen-mode' : ''}`}>
       {!zenMode && <Sidebar />}
+      {!zenMode && !sidebarCollapsed && (
+        <div className="sidebar-backdrop visible" onClick={toggleSidebar} />
+      )}
       {renderMain()}
 
       {/* Overlay modals */}
