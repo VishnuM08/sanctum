@@ -53,7 +53,11 @@ async function authenticatedFetch(url: string, options: RequestInit = {}): Promi
   console.log(`[API Response] ${method} ${url} | Status: ${res.status}`);
   
   if (res.status === 401 || res.status === 403) {
-    console.warn(`[API Unauthorized] Token rejected with status ${res.status}. Triggering logout.`);
+    let bodyText = '';
+    try {
+      bodyText = await res.text();
+    } catch (e) {}
+    console.warn(`[API Unauthorized] Token rejected with status ${res.status}. Body: ${bodyText.substring(0, 500)}`);
     if (onUnauthorizedCallback) {
       onUnauthorizedCallback();
     }
