@@ -193,4 +193,26 @@ public class AgentService {
 
         return reply;
     }
+
+    public String generateText(String prompt, String systemPrompt) {
+        String fullPrompt = (systemPrompt != null ? systemPrompt + "\n\n" : "") + prompt;
+        try {
+            String url = ollamaHost + "/api/generate";
+            OllamaRequest request = new OllamaRequest(ollamaModel, fullPrompt, false, null);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<OllamaRequest> entity = new HttpEntity<>(request, headers);
+
+            OllamaResponse response = restTemplate.postForObject(url, entity, OllamaResponse.class);
+
+            if (response != null && response.getResponse() != null) {
+                return response.getResponse().trim();
+            }
+        } catch (Exception e) {
+            log.error("Ollama general text generation failed: {}", e.getMessage());
+            throw new RuntimeException("Ollama service error: " + e.getMessage());
+        }
+        return "No response from local AI.";
+    }
 }

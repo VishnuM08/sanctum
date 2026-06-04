@@ -56,6 +56,18 @@ public class AgentController {
         }
     }
 
+    @PostMapping("/generate")
+    public ResponseEntity<?> generateText(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody AgentDto.GenerateRequest request) {
+        try {
+            String result = agentService.generateText(request.getPrompt(), request.getSystemPrompt());
+            return ResponseEntity.ok().body(new AgentDto.GenerateResponse(result));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     private static class DigestResponse {
         private final String digest;
 

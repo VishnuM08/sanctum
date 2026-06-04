@@ -302,6 +302,17 @@ export const api = {
     return data.reply;
   },
 
+  async generateText(prompt: string, systemPrompt?: string): Promise<string> {
+    const res = await fetch(`${API_BASE}/agent/generate`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ prompt, systemPrompt }),
+    });
+    if (!res.ok) throw new Error('Failed to generate text from local AI');
+    const data = await res.json();
+    return data.result;
+  },
+
   async googleLogin(idToken: string): Promise<{ token: string; id: string; name: string; email: string }> {
     const res = await fetch(`${API_BASE}/auth/google`, {
       method: 'POST',

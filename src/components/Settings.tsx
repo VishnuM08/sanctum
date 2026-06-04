@@ -274,17 +274,6 @@ function NotificationsSection() {
 // ── Connections section ────────────────────────────────────────────────────
 
 function ConnectionsSection() {
-  const aiKey    = useStore((s) => s.aiKey);
-  const setAiKey = useStore((s) => s.setAiKey);
-  const [keyInput, setKeyInput] = useState(aiKey);
-  const [saved, setSaved] = useState(false);
-
-  const saveKey = () => {
-    setAiKey(keyInput.trim());
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
-
   const integrations = [
     { name: 'GitHub', icon: '🐙', connected: false, desc: 'Link GitHub repos to pages' },
     { name: 'Google Drive', icon: '📁', connected: true, desc: 'Embed Google Docs and Sheets' },
@@ -296,42 +285,17 @@ function ConnectionsSection() {
     <>
       <h1 className="settings-h1">Connections</h1>
 
-      {/* AI Key */}
-      <h2 className="settings-h2">AI Assistant (Anthropic)</h2>
-      <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12, lineHeight: 1.6 }}>
-        Add your{' '}
-        <a href="https://console.anthropic.com/account/keys" target="_blank" rel="noreferrer"
-           style={{ color: 'var(--accent)' }}>Anthropic API key</a>{' '}
-        to enable real AI writing, summarization, and task extraction using Claude Haiku.
-        The key is stored locally in your browser.
-      </p>
-      <div className="settings-row" style={{ flexDirection: 'column', gap: 8 }}>
-        <label style={{ fontWeight: 500, fontSize: 14 }}>API Key</label>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input
-            className="settings-input"
-            type="password"
-            placeholder="sk-ant-api03-..."
-            value={keyInput}
-            onChange={(e) => setKeyInput(e.target.value)}
-            style={{ flex: 1, fontFamily: 'var(--font-mono)', fontSize: 13 }}
-          />
-          <button
-            className={`settings-btn ${saved ? 'secondary' : 'primary'}`}
-            onClick={saveKey}
-            style={{ whiteSpace: 'nowrap' }}
-          >
-            {saved ? '✓ Saved' : 'Save key'}
-          </button>
-          {aiKey && (
-            <button className="settings-btn danger" onClick={() => { setAiKey(''); setKeyInput(''); }}>
-              Remove
-            </button>
-          )}
+      {/* Local AI status */}
+      <h2 className="settings-h2">AI Assistant</h2>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 8, background: 'var(--bg-hover)', marginBottom: 24, border: '1px solid var(--border)' }}>
+        <span style={{ fontSize: 28 }}>🤖</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2 }}>Local AI (Ollama)</div>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            AI writing, summaries, and action item extraction run privately on your own server via Ollama — no third-party API keys required.
+          </div>
         </div>
-        <div style={{ fontSize: 12, color: aiKey ? '#4caf50' : 'var(--text-faint)', display: 'flex', alignItems: 'center', gap: 4 }}>
-          {aiKey ? '✓ AI key configured — real Claude responses enabled' : '⚠ No key — AI panel uses demo mode'}
-        </div>
+        <span style={{ fontSize: 12, fontWeight: 600, color: '#4caf50', background: 'rgba(76,175,80,0.12)', padding: '3px 10px', borderRadius: 20, whiteSpace: 'nowrap' }}>✓ Active</span>
       </div>
 
       <h2 className="settings-h2">Other Integrations</h2>
