@@ -67,19 +67,38 @@ export const SlashMenu = forwardRef<SlashMenuRef, SlashMenuProps>(
       );
     }
 
+    let lastCategory = '';
     return (
       <div className="slash-menu" ref={listRef}>
-        <div className="slash-menu-header">Basic blocks</div>
-        {items.map((item, idx) => (
-          <Row
-            key={item.title}
-            item={item}
-            idx={idx}
-            selected={idx === selected}
-            onHover={() => setSelected(idx)}
-            onClick={() => pick(idx)}
-          />
-        ))}
+        {items.map((item, idx) => {
+          const itemCategory = item.category || 'basic';
+          const showHeader = itemCategory !== lastCategory;
+          if (showHeader) {
+            lastCategory = itemCategory;
+          }
+          return (
+            <div key={item.title}>
+              {showHeader && (
+                <div 
+                  className="slash-menu-header"
+                  style={idx > 0 ? { marginTop: 6, borderTop: '1px solid var(--border)', paddingTop: 8 } : {}}
+                >
+                  {itemCategory === 'ai' && '✨ AI Feature'}
+                  {itemCategory === 'media' && '🖼️ Media'}
+                  {itemCategory === 'interactive' && '⚡ Interactive blocks'}
+                  {itemCategory === 'basic' && '📝 Basic blocks'}
+                </div>
+              )}
+              <Row
+                item={item}
+                idx={idx}
+                selected={idx === selected}
+                onHover={() => setSelected(idx)}
+                onClick={() => pick(idx)}
+              />
+            </div>
+          );
+        })}
       </div>
     );
   },

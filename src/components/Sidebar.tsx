@@ -39,6 +39,7 @@ export function Sidebar() {
   const toggleSidebar      = useStore((s) => s.toggleSidebar);
   const setSidebarWidth    = useStore((s) => s.setSidebarWidth);
   const workspace          = useStore((s) => s.workspace);
+  const user               = useStore((s) => s.user);
   const setSearchOpen      = useStore((s) => s.setSearchOpen);
   const navigateToSettings = useStore((s) => s.navigateToSettings);
   const createPage         = useStore((s) => s.createPage);
@@ -230,8 +231,21 @@ export function Sidebar() {
         <div className="sidebar-inner">
           {/* Workspace header */}
           <div className="workspace-header" onClick={() => navigateToSettings('workspace')}>
-            <div className="workspace-icon">
-              <NotionIcon icon={workspace.icon} size="1.2em" style={{ display: 'block' }} />
+            <div 
+              className="workspace-icon" 
+              style={{ 
+                background: user.avatar && (user.avatar.startsWith('http://') || user.avatar.startsWith('https://')) ? 'transparent' : 'var(--accent)' 
+              }}
+            >
+              {user.avatar && (user.avatar.startsWith('http://') || user.avatar.startsWith('https://')) ? (
+                <img 
+                  src={user.avatar} 
+                  alt="avatar" 
+                  style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} 
+                />
+              ) : (
+                <NotionIcon icon={workspace.icon} size="1.2em" style={{ display: 'block' }} />
+              )}
             </div>
             <span className="workspace-name">{workspace.name}</span>
             <button
@@ -244,6 +258,10 @@ export function Sidebar() {
 
           {/* Primary nav */}
           <div className="sidebar-nav">
+            <button className="sidebar-nav-item" style={{ color: 'var(--accent)', fontWeight: 500 }} onClick={() => createPage()}>
+              <span className="nav-icon"><Plus size={14} style={{ color: 'var(--accent)' }} /></span>
+              <span>Add a page</span>
+            </button>
             <button className="sidebar-nav-item" onClick={() => setSearchOpen(true)}>
               <span className="nav-icon"><Search size={14} /></span>
               <span>Search</span>
@@ -268,9 +286,6 @@ export function Sidebar() {
             <button className={`sidebar-nav-item ${activeView.type === 'agent' ? 'active' : ''}`} onClick={() => navigate({ type: 'agent' })}>
               <span className="nav-icon"><Bot size={14} /></span>
               <span>AI Agent</span>
-            </button>
-            <button className={`sidebar-nav-item ${activeView.type === 'settings' ? 'active' : ''}`} onClick={() => navigateToSettings()}>
-              <span className="nav-icon"><Settings size={14} /></span><span>Settings</span>
             </button>
 
             {/* Templates dropdown */}
@@ -469,8 +484,8 @@ export function Sidebar() {
             <button className="sidebar-nav-item" onClick={() => setTrashOpen(true)}>
               <span className="nav-icon"><Trash2 size={14} /></span><span>Trash</span>
             </button>
-            <button className="sidebar-new-page-btn" onClick={() => createPage()}>
-              <Plus size={14} /><span>New page</span>
+            <button className={`sidebar-nav-item ${activeView.type === 'settings' ? 'active' : ''}`} onClick={() => navigateToSettings()}>
+              <span className="nav-icon"><Settings size={14} /></span><span>Settings</span>
             </button>
           </div>
         </div>
