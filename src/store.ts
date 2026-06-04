@@ -19,12 +19,12 @@ import coverMountains from './assets/notion/cover_mountains.png';
  */
 const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
-/**
- * The derived AES key lives ONLY in this module-level variable — never in the
- * persisted store, never in localStorage. On reload it's gone and the vault
- * locks automatically.
- */
 let vaultKey: CryptoKey | null = null;
+
+/**
+ * Store active debounce timers for page updates.
+ */
+const updateTimers: Record<string, any> = {};
 
 // ── Serialization / Deserialization helpers ─────────────────────────────────
 
@@ -445,6 +445,7 @@ interface StoreState {
   vaultEntries: VaultEntry[];
 
   isAuthenticated: boolean;
+  savingPages: Record<string, 'saving' | 'saved' | 'error'>;
 
   // Backend Integration
   syncWithBackend: () => Promise<void>;
@@ -576,6 +577,7 @@ export const useStore = create<StoreState>()(
       vaultEntries: [],
 
       isAuthenticated: api.getToken() !== null,
+      savingPages: {},
       isServerOnline: false,
 
       setIsServerOnline: (online) => set({ isServerOnline: online }),
@@ -583,10 +585,17 @@ export const useStore = create<StoreState>()(
       _syncPageToBackend: (id) => {
         const page = get().pages.find((p) => p.id === id);
         if (page && api.getToken() && isUuid(id)) {
+          set((s) => ({ savingPages: { ...s.savingPages, [id]: 'saving' } }));
           const matchedDb = page.databaseId ? get().databases.find((db) => db.id === page.databaseId) : undefined;
           const contentStr = serializePageContent(page, matchedDb);
           api.updateNote(id, page.title || 'Untitled', contentStr)
-            .catch((err) => console.error(`Failed to sync page ${id} to backend`, err));
+            .then(() => {
+              set((s) => ({ savingPages: { ...s.savingPages, [id]: 'saved' } }));
+            })
+            .catch((err) => {
+              console.error(`Failed to sync page ${id} to backend`, err);
+              set((s) => ({ savingPages: { ...s.savingPages, [id]: 'error' } }));
+            });
         }
       },
 
@@ -704,7 +713,66 @@ export const useStore = create<StoreState>()(
             }
           }
 
-          const topLevelPageIds = parsedPages
+          const currentPages = get().pages;
+          const currentSaving = get().savingPages || {};
+          const mergedPages: Page[] = [];
+
+          // 1. Process server pages
+          for (const serverPage of parsedPages) {
+            const localPage = currentPages.find((p) => p.id === serverPage.id);
+            if (localPage) {
+              const isDirty = updateTimers[serverPage.id] !== undefined || currentSaving[serverPage.id] === 'saving';
+              if (isDirty) {
+                mergedPages.push(localPage);
+              } else {
+                mergedPages.push(serverPage);
+              }
+            } else {
+              mergedPages.push(serverPage);
+            }
+          }
+
+          // 2. Preserve any local pages that are NOT on the server yet (e.g. temporary IDs or unsaved creations)
+          for (const localPage of currentPages) {
+            const onServer = parsedPages.some((sp) => sp.id === localPage.id);
+            if (!onServer) {
+              const isTemp = !isUuid(localPage.id);
+              const isDirty = updateTimers[localPage.id] !== undefined || currentSaving[localPage.id] === 'saving';
+              if (isTemp || isDirty) {
+                mergedPages.push(localPage);
+              }
+            }
+          }
+
+          // Merge databases based on whether their host pages are dirty
+          const currentDatabases = get().databases;
+          const mergedDatabases: Database[] = [];
+
+          for (const serverDb of parsedDatabases) {
+            const hostPageId = mergedPages.find(p => p.databaseId === serverDb.id)?.id;
+            const isPageDirty = hostPageId ? (updateTimers[hostPageId] !== undefined || currentSaving[hostPageId] === 'saving') : false;
+            if (isPageDirty) {
+              const localDb = currentDatabases.find(d => d.id === serverDb.id);
+              if (localDb) mergedDatabases.push(localDb);
+              else mergedDatabases.push(serverDb);
+            } else {
+              mergedDatabases.push(serverDb);
+            }
+          }
+
+          for (const localDb of currentDatabases) {
+            const onServer = parsedDatabases.some(sd => sd.id === localDb.id);
+            if (!onServer) {
+              const hostPageId = mergedPages.find(p => p.databaseId === localDb.id)?.id;
+              const isPageDirty = hostPageId ? (updateTimers[hostPageId] !== undefined || currentSaving[hostPageId] === 'saving') : false;
+              const isTemp = hostPageId ? !isUuid(hostPageId) : true;
+              if (isTemp || isPageDirty) {
+                mergedDatabases.push(localDb);
+              }
+            }
+          }
+
+          const topLevelPageIds = mergedPages
             .filter((p) => !p.parentId && !p.isDeleted)
             .sort((a, b) => {
               const posA = a.position ?? 0;
@@ -714,7 +782,7 @@ export const useStore = create<StoreState>()(
             })
             .map((p) => p.id);
 
-          const favoriteOrder = parsedPages
+          const favoriteOrder = mergedPages
             .filter((p) => p.isFavorite && !p.isDeleted)
             .sort((a, b) => {
               const posA = a.favoritePosition ?? 0;
@@ -724,7 +792,7 @@ export const useStore = create<StoreState>()(
             })
             .map((p) => p.id);
 
-          set({ pages: parsedPages, databases: parsedDatabases, topLevelPageIds, favoriteOrder });
+          set({ pages: mergedPages, databases: mergedDatabases, topLevelPageIds, favoriteOrder });
 
           // Sync reminders
           try {
@@ -838,13 +906,66 @@ export const useStore = create<StoreState>()(
           ),
         }));
 
-        // Trigger backend update
-        const page = get().pages.find((p) => p.id === id);
-        if (page && api.getToken() && isUuid(id)) {
-          const matchedDb = page.databaseId ? get().databases.find((db) => db.id === page.databaseId) : undefined;
-          const contentStr = serializePageContent(page, matchedDb);
-          api.updateNote(id, page.title || 'Untitled', contentStr)
-            .catch((err) => console.error('Failed to update page on backend', err));
+        const isContentEdit = 'content' in patch || 'title' in patch;
+
+        if (api.getToken() && isUuid(id)) {
+          const page = get().pages.find((p) => p.id === id);
+          if (!page) return;
+
+          if (isContentEdit) {
+            // Debounce content and title updates (Google Docs style)
+            set((s) => ({
+              savingPages: { ...s.savingPages, [id]: 'saving' }
+            }));
+
+            if (updateTimers[id]) {
+              clearTimeout(updateTimers[id]);
+            }
+
+            updateTimers[id] = setTimeout(async () => {
+              delete updateTimers[id];
+              try {
+                const currentPage = get().pages.find((p) => p.id === id);
+                if (currentPage) {
+                  const matchedDb = currentPage.databaseId ? get().databases.find((db) => db.id === currentPage.databaseId) : undefined;
+                  const contentStr = serializePageContent(currentPage, matchedDb);
+                  await api.updateNote(id, currentPage.title || 'Untitled', contentStr);
+                }
+                if (!updateTimers[id]) {
+                  set((s) => ({
+                    savingPages: { ...s.savingPages, [id]: 'saved' }
+                  }));
+                }
+              } catch (err) {
+                console.error('Failed to update page on backend:', err);
+                if (!updateTimers[id]) {
+                  set((s) => ({
+                    savingPages: { ...s.savingPages, [id]: 'error' }
+                  }));
+                }
+              }
+            }, 1000);
+          } else {
+            // Immediate sync for other changes (cover, icon, settings)
+            const matchedDb = page.databaseId ? get().databases.find((db) => db.id === page.databaseId) : undefined;
+            const contentStr = serializePageContent(page, matchedDb);
+            api.updateNote(id, page.title || 'Untitled', contentStr)
+              .then(() => {
+                if (!updateTimers[id]) {
+                  set((s) => ({
+                    savingPages: { ...s.savingPages, [id]: 'saved' }
+                  }));
+                }
+              })
+              .catch((err) => {
+                console.error('Failed to update page on backend:', err);
+                if (!updateTimers[id]) {
+                  set((s) => ({
+                    savingPages: { ...s.savingPages, [id]: 'error' }
+                  }));
+                }
+              });
+          }
         }
       },
 
@@ -1619,6 +1740,7 @@ export const useStore = create<StoreState>()(
         api.logout();
         set({
           isAuthenticated: false,
+          savingPages: {},
           vaultUnlocked: false,
           vaultEntries: [],
           vaultEncrypted: [],
@@ -1666,9 +1788,9 @@ export const useStore = create<StoreState>()(
     {
       name: 'notebook-2.0-v4',
       partialize: (state) => {
-        const { vaultUnlocked, vaultEntries, searchOpen, inboxOpen, shortcutsOpen, zenMode, ...rest } = state;
+        const { vaultUnlocked, vaultEntries, searchOpen, inboxOpen, shortcutsOpen, zenMode, savingPages, ...rest } = state;
         void vaultUnlocked; void vaultEntries; void searchOpen;
-        void inboxOpen; void shortcutsOpen; void zenMode;
+        void inboxOpen; void shortcutsOpen; void zenMode; void savingPages;
         return rest as typeof state;
       },
       onRehydrateStorage: () => (state) => {

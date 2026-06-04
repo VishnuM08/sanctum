@@ -3,7 +3,7 @@ import {
   MoreHorizontal, Share2, Star, Maximize2, ChevronRight,
   Trash2, Copy, Lock, Unlock, Globe, Type, AlignLeft,
   Link, Download, ExternalLink, History, Search, FileCode,
-  CalendarDays, BookMarked, Menu
+  CalendarDays, BookMarked, Menu, Cloud, CloudOff
 } from 'lucide-react';
 import { useStore } from '../store';
 import { Editor } from './Editor';
@@ -38,7 +38,49 @@ export function PageView({ pageId }: Props) {
   const saveSnapshot   = useStore((s) => s.saveSnapshot);
   void useStore.getState().setPageAiSummary; // available via store
   const getDailyNoteId = useStore((s) => s.getDailyNoteId);
+  const savingPages = useStore((s) => s.savingPages);
+  const isServerOnline = useStore((s) => s.isServerOnline);
+  const isAuthenticated = useStore((s) => s.isAuthenticated);
   const { toast }      = useToast();
+
+  const getSyncIndicator = () => {
+    if (!isAuthenticated || !page) return null;
+    const status = savingPages[page.id];
+
+    if (!isServerOnline) {
+      return (
+        <div className="sync-status offline" title="Offline - Saved locally" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px', height: 28, fontSize: 12, color: 'var(--text-muted)' }}>
+          <CloudOff size={13} style={{ opacity: 0.6 }} />
+          <span className="sync-status-text" style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.02em' }}>Saved locally</span>
+        </div>
+      );
+    }
+
+    if (status === 'saving') {
+      return (
+        <div className="sync-status saving" title="Saving changes..." style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px', height: 28, fontSize: 12, color: 'var(--accent)' }}>
+          <Cloud size={13} className="sync-icon-saving" style={{ animation: 'sync-pulse 1.5s infinite ease-in-out', color: 'var(--accent)' }} />
+          <span className="sync-status-text" style={{ fontSize: '11px', fontWeight: 500, color: 'var(--accent)', letterSpacing: '0.02em' }}>Saving...</span>
+        </div>
+      );
+    }
+
+    if (status === 'error') {
+      return (
+        <div className="sync-status error" title="Sync error. Retrying..." style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px', height: 28, fontSize: 12, color: '#ef4444' }}>
+          <CloudOff size={13} style={{ color: '#ef4444' }} />
+          <span className="sync-status-text" style={{ fontSize: '11px', fontWeight: 500, color: '#ef4444', letterSpacing: '0.02em' }}>Sync error</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="sync-status synced" title="All changes saved to cloud" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px', height: 28, fontSize: 12, color: '#10b981' }}>
+        <Cloud size={13} style={{ color: '#10b981' }} />
+        <span className="sync-status-text" style={{ fontSize: '11px', fontWeight: 500, color: '#10b981', letterSpacing: '0.02em' }}>Saved to cloud</span>
+      </div>
+    );
+  };
 
   const databaseId = page?.databaseId;
   const database   = useStore((s) =>
@@ -171,7 +213,8 @@ export function PageView({ pageId }: Props) {
             ))}
           </div>
 
-          <div className="topbar-actions">
+          <div className="topbar-actions" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {getSyncIndicator()}
             <button
               className="topbar-btn"
               onClick={() => { toggleFavorite(page.id); toast(page.isFavorite ? 'Removed from favorites' : 'Added to favorites'); }}

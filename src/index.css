@@ -94,6 +94,11 @@
   100% { transform: scale(1); }
 }
 
+@keyframes sync-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
 /* Sidebar item stagger on first load */
 @keyframes sidebarItemIn {
   from { opacity: 0; transform: translateX(-6px); }
