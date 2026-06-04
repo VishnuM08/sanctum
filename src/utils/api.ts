@@ -97,7 +97,7 @@ export const api = {
   },
 
   // Authentication API
-  async login(email: string, password: string): Promise<any> {
+  async login(email: string, password: string): Promise<{ otpRequired?: boolean; email?: string; token?: string; id?: string; name?: string }> {
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -106,6 +106,27 @@ export const api = {
     if (!res.ok) {
       const msg = await res.text();
       throw new Error(msg || 'Invalid email or password');
+    }
+    const data = await res.json();
+    if (data.otpRequired) {
+      return data;
+    }
+    if (data.token) {
+      this.setToken(data.token);
+      localStorage.setItem('vault-user', JSON.stringify({ name: data.name, email: data.email }));
+    }
+    return data;
+  },
+
+  async verifyOtp(email: string, code: string): Promise<{ token: string; id: string; name: string; email: string }> {
+    const res = await fetch(`${API_BASE}/auth/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code }),
+    });
+    if (!res.ok) {
+      const msg = await res.text();
+      throw new Error(msg || 'Invalid or expired verification code');
     }
     const data = await res.json();
     this.setToken(data.token);

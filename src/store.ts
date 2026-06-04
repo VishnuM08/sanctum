@@ -412,6 +412,7 @@ interface StoreState {
   user: UserProfile;
   settings: AppSettings;
   activeView: AppView;
+  viewHistory: AppView[];
   sidebarCollapsed: boolean;
   sidebarWidth: number;
   searchOpen: boolean;
@@ -448,6 +449,7 @@ interface StoreState {
   navigate: (view: AppView) => void;
   navigateToPage: (id: string) => void;
   navigateToSettings: (section?: SettingsSection) => void;
+  goBack: () => void;
 
   // Database actions
   updateDatabase: (id: string, patch: Partial<Omit<Database, 'id'>>) => void;
@@ -492,6 +494,9 @@ interface StoreState {
 
   // Auth actions
   signIn: (profile?: Partial<UserProfile>, idToken?: string) => void;
+  emailLogin: (email: string, password: string) => Promise<{ otpRequired?: boolean; email?: string }>;
+  verifyOtp: (email: string, code: string) => Promise<void>;
+  emailRegister: (name: string, email: string, password: string) => Promise<void>;
   signOut: () => void;
 
   // Database view filters/sorts
@@ -536,6 +541,7 @@ export const useStore = create<StoreState>()(
         typewriterMode: false,
       },
       activeView: { type: 'home' },
+      viewHistory: [],
       sidebarCollapsed: false,
       sidebarWidth: 240,
       searchOpen: false,
@@ -883,15 +889,69 @@ export const useStore = create<StoreState>()(
 
       // ── Navigation ───────────────────────────────────────────────────────
 
-      navigate: (view) => set({ activeView: view }),
+      navigate: (view) => {
+        const currentView = get().activeView;
+        const currentViewStr = JSON.stringify(currentView);
+        const nextViewStr = JSON.stringify(view);
+
+        if (currentViewStr === nextViewStr) return;
+
+        set((s) => ({
+          activeView: view,
+          viewHistory: [...s.viewHistory, currentView],
+        }));
+      },
       navigateToPage: (id) => {
+        const currentView = get().activeView;
+        const nextView: AppView = { type: 'page', id };
+        const currentViewStr = JSON.stringify(currentView);
+        const nextViewStr = JSON.stringify(nextView);
+
         set((s) => {
           const hist = [id, ...s.visitHistory.filter((v) => v !== id)].slice(0, 8);
-          return { activeView: { type: 'page', id }, visitHistory: hist };
+          const nextHistory = currentViewStr === nextViewStr ? s.viewHistory : [...s.viewHistory, currentView];
+          return {
+            activeView: nextView,
+            visitHistory: hist,
+            viewHistory: nextHistory,
+          };
         });
       },
-      navigateToSettings: (section = 'account') =>
-        set({ activeView: { type: 'settings', section } }),
+      navigateToSettings: (section = 'account') => {
+        const currentView = get().activeView;
+        const nextView: AppView = { type: 'settings', section };
+        const currentViewStr = JSON.stringify(currentView);
+        const nextViewStr = JSON.stringify(nextView);
+
+        set((s) => {
+          const nextHistory = currentViewStr === nextViewStr ? s.viewHistory : [...s.viewHistory, currentView];
+          return {
+            activeView: nextView,
+            viewHistory: nextHistory,
+          };
+        });
+      },
+      goBack: () => {
+        set((s) => {
+          let nextHistory = [...s.viewHistory];
+          while (nextHistory.length > 0) {
+            const previousView = nextHistory.pop()!;
+            if (previousView.type === 'page') {
+              const exists = s.pages.find((p) => p.id === previousView.id && !p.isDeleted);
+              if (!exists) continue; // Skip deleted pages in history
+            }
+            return {
+              activeView: previousView,
+              viewHistory: nextHistory,
+            };
+          }
+          // If no valid view remains in history, default to home
+          return {
+            activeView: { type: 'home' },
+            viewHistory: [],
+          };
+        });
+      },
 
       // ── Database actions ─────────────────────────────────────────────────
 
@@ -1373,6 +1433,29 @@ export const useStore = create<StoreState>()(
             console.error('Failed to login to backend during signIn:', e);
           }
         })();
+      },
+
+      emailLogin: async (email, password) => {
+        return await api.login(email, password);
+      },
+
+      verifyOtp: async (email, code) => {
+        const data = await api.verifyOtp(email, code);
+        set({
+          isAuthenticated: true,
+          user: {
+            id: data.id,
+            name: data.name,
+            email: data.email,
+            avatar: '🧑',
+            color: '#2383e2',
+          },
+        });
+        await get().syncWithBackend();
+      },
+
+      emailRegister: async (name, email, password) => {
+        await api.register(name, email, password);
       },
 
       signOut: () => {

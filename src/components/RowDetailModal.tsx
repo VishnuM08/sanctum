@@ -3,6 +3,7 @@ import { X, Trash2 } from 'lucide-react';
 import { useStore } from '../store';
 import { SELECT_COLORS } from '../types';
 import type { Database, DatabaseCellValue } from '../types';
+import { registerBackButtonHandler } from '../utils/backButton';
 
 interface Props {
   database: Database;
@@ -23,6 +24,13 @@ export function RowDetailModal({ database, rowId, onClose }: Props) {
     };
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
+  useEffect(() => {
+    return registerBackButtonHandler(() => {
+      onClose();
+      return true; // consumed
+    });
   }, [onClose]);
 
   if (!row) return null;

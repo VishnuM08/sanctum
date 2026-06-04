@@ -12,6 +12,7 @@ import { Vault } from './components/Vault';
 import { LandingPage } from './components/LandingPage';
 import { AIAgentChat } from './components/AIAgentChat';
 import { useStore } from './store';
+import { handleBackButton, registerBackButtonHandler } from './utils/backButton';
 
 export default function App() {
   const activeView      = useStore((s) => s.activeView);
@@ -35,6 +36,55 @@ export default function App() {
       useStore.setState({ sidebarCollapsed: true });
     }
   }, []);
+
+  // Register Capacitor native back button handler
+  useEffect(() => {
+    let listener: any;
+    
+    const initBackButton = async () => {
+      const { Capacitor } = await import('@capacitor/core');
+      if (Capacitor.isNativePlatform()) {
+        const { App: CapApp } = await import('@capacitor/app');
+        listener = await CapApp.addListener('backButton', () => {
+          const handled = handleBackButton();
+          if (!handled) {
+            const state = useStore.getState();
+            if (state.viewHistory.length > 0) {
+              state.goBack();
+            } else {
+              CapApp.exitApp();
+            }
+          }
+        });
+      }
+    };
+
+    initBackButton();
+
+    return () => {
+      if (listener) {
+        listener.remove();
+      }
+    };
+  }, []);
+
+  // Register handler to close search modal on back button
+  useEffect(() => {
+    if (!searchOpen) return;
+    return registerBackButtonHandler(() => {
+      setSearchOpen(false);
+      return true; // consumed
+    });
+  }, [searchOpen, setSearchOpen]);
+
+  // Register handler to close keyboard shortcuts modal on back button
+  useEffect(() => {
+    if (!shortcutsOpen) return;
+    return registerBackButtonHandler(() => {
+      setShortcutsOpen(false);
+      return true; // consumed
+    });
+  }, [shortcutsOpen, setShortcutsOpen]);
 
 
   // Apply theme class

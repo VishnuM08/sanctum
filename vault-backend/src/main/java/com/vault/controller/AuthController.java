@@ -4,6 +4,7 @@ import com.vault.dto.AuthDto;
 import com.vault.entity.User;
 import com.vault.security.UserPrincipal;
 import com.vault.service.UserService;
+import com.vault.service.OtpService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final UserService userService;
+    private final OtpService otpService;
 
     @Value("${security.allow-mock-login:false}")
     private boolean allowMockLogin;
@@ -33,8 +35,9 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthDto.LoginRequest request) {
         try {
-            AuthDto.LoginResponse response = userService.login(request);
-            return ResponseEntity.ok(response);
+            userService.validateCredentials(request);
+            otpService.generateAndSendOtp(request.getEmail());
+            return ResponseEntity.ok(new OtpRequiredResponse(true, request.getEmail()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -112,6 +115,59 @@ public class AuthController {
 
         public void setName(String name) {
             this.name = name;
+        }
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<?> verifyOtp(@RequestBody VerifyOtpRequest request) {
+        try {
+            boolean verified = otpService.verifyOtp(request.getEmail(), request.getCode());
+            if (!verified) {
+                return ResponseEntity.badRequest().body("Invalid or expired verification code");
+            }
+            AuthDto.LoginResponse response = userService.generateLoginResponse(request.getEmail());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    public static class OtpRequiredResponse {
+        private final boolean otpRequired;
+        private final String email;
+
+        public OtpRequiredResponse(boolean otpRequired, String email) {
+            this.otpRequired = otpRequired;
+            this.email = email;
+        }
+
+        public boolean isOtpRequired() {
+            return otpRequired;
+        }
+
+        public String getEmail() {
+            return email;
+        }
+    }
+
+    public static class VerifyOtpRequest {
+        private String email;
+        private String code;
+
+        public String getEmail() {
+            return email;
+        }
+
+        public void setEmail(String email) {
+            this.email = email;
+        }
+
+        public String getCode() {
+            return code;
+        }
+
+        public void setCode(String code) {
+            this.code = code;
         }
     }
 }

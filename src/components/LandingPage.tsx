@@ -41,8 +41,70 @@ const FEATURES = [
 
 export function LandingPage() {
   const signIn = useStore((s) => s.signIn);
+  const emailLogin = useStore((s) => s.emailLogin);
+  const verifyOtp = useStore((s) => s.verifyOtp);
+  const emailRegister = useStore((s) => s.emailRegister);
+
   const [signingIn, setSigningIn] = useState(false);
   const [googleReady, setGoogleReady] = useState(false);
+
+  // Unified Auth state
+  const [authMethod, setAuthMethod] = useState<'google' | 'vault'>('google');
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [otpStep, setOtpStep] = useState(false);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(false);
+
+  const handleVaultAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    setAuthLoading(true);
+
+    try {
+      if (authMode === 'register') {
+        if (!name.trim() || !email.trim() || !password.trim()) {
+          throw new Error('Please fill in all fields');
+        }
+        await emailRegister(name.trim(), email.trim(), password);
+        setAuthMode('login');
+        setAuthError(null);
+        alert('Registration successful! Please log in to receive your OTP.');
+      } else {
+        if (!email.trim() || !password.trim()) {
+          throw new Error('Please fill in all fields');
+        }
+        const res = await emailLogin(email.trim(), password);
+        if (res?.otpRequired) {
+          setOtpStep(true);
+        }
+      }
+    } catch (err: any) {
+      setAuthError(err.message || 'Authentication failed');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleOtpVerifySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    setAuthLoading(true);
+
+    try {
+      if (!otpCode.trim() || otpCode.length !== 6) {
+        throw new Error('Please enter the 6-digit code');
+      }
+      await verifyOtp(email.trim(), otpCode.trim());
+    } catch (err: any) {
+      setAuthError(err.message || 'Verification failed');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
 
   const signInRef = useRef(signIn);
   useEffect(() => {
@@ -180,8 +242,8 @@ export function LandingPage() {
           </nav>
           <div id="googleBtnNav" style={{ display: googleReady ? 'block' : 'none' }} />
           {!googleReady && (
-            <button className="landing-signin-sm" onClick={doGoogleSignIn} disabled={signingIn}>
-              <GoogleIcon size={16} /> Sign in
+            <button className="landing-signin-sm" onClick={() => { setAuthMethod('vault'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} disabled={signingIn}>
+              Sign in
             </button>
           )}
         </div>
@@ -203,18 +265,149 @@ export function LandingPage() {
             One beautiful, fast workspace that works the way you think.
           </p>
 
-          <div className="landing-cta hero-anim" style={{ animationDelay: '400ms' }}>
-            <div id="googleBtnHero" style={{ display: googleReady ? 'block' : 'none', height: 40 }} />
-            {!googleReady && (
-              <button className="google-btn" onClick={doGoogleSignIn} disabled={signingIn}>
-                {signingIn ? (
-                  <><span className="google-spinner" /> Signing in…</>
-                ) : (
-                  <><GoogleIcon size={18} /> Continue with Google</>
-                )}
+          <div className="landing-auth-card hero-anim" style={{ animationDelay: '400ms' }}>
+            <div className="landing-auth-tabs">
+              <button
+                type="button"
+                className={`landing-auth-tab ${authMethod === 'google' ? 'active' : ''}`}
+                onClick={() => { setAuthMethod('google'); setAuthError(null); setOtpStep(false); }}
+              >
+                Google Login
               </button>
+              <button
+                type="button"
+                className={`landing-auth-tab ${authMethod === 'vault' ? 'active' : ''}`}
+                onClick={() => { setAuthMethod('vault'); setAuthError(null); }}
+              >
+                Vault Account
+              </button>
+            </div>
+
+            {authError && (
+              <div className="landing-auth-error">
+                <span>⚠️</span>
+                <span>{authError}</span>
+              </div>
             )}
-            <span className="landing-cta-note">Sign in securely with Google to access your workspace</span>
+
+            {authMethod === 'google' ? (
+              <div className="landing-cta" style={{ margin: 0, width: '100%' }}>
+                <div id="googleBtnHero" style={{ display: googleReady ? 'block' : 'none', height: 40, width: '100%' }} />
+                {!googleReady && (
+                  <button className="google-btn" style={{ width: '100%' }} onClick={doGoogleSignIn} disabled={signingIn}>
+                    {signingIn ? (
+                      <><span className="google-spinner" /> Signing in…</>
+                    ) : (
+                      <><GoogleIcon size={18} /> Continue with Google</>
+                    )}
+                  </button>
+                )}
+                <span className="landing-cta-note" style={{ textAlign: 'center', width: '100%' }}>
+                  Sign in securely with Google to access your workspace
+                </span>
+              </div>
+            ) : otpStep ? (
+              <form onSubmit={handleOtpVerifySubmit} className="otp-container">
+                <div className="otp-description">
+                  A 6-digit verification code has been sent to <strong>{email}</strong>.
+                  <br />
+                  <span style={{ fontSize: '11px', color: 'var(--text-faint)' }}>
+                    (Check your container console logs if unconfigured)
+                  </span>
+                </div>
+                <div className="landing-auth-field">
+                  <label className="landing-auth-label">Verification Code</label>
+                  <input
+                    type="text"
+                    className="landing-auth-input otp-code-input"
+                    placeholder="000000"
+                    maxLength={6}
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                    disabled={authLoading}
+                    autoFocus
+                  />
+                </div>
+                <button type="submit" className="landing-auth-btn" disabled={authLoading || otpCode.length !== 6}>
+                  {authLoading ? (
+                    <><span className="google-spinner" style={{ borderColor: 'transparent', borderTopColor: '#fff' }} /> Verifying…</>
+                  ) : (
+                    'Verify & Login'
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="landing-auth-link"
+                  onClick={() => { setOtpStep(false); setOtpCode(''); setAuthError(null); }}
+                >
+                  ← Back to login
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleVaultAuthSubmit} className="vault-auth-form">
+                {authMode === 'register' && (
+                  <div className="landing-auth-field">
+                    <label className="landing-auth-label">Full Name</label>
+                    <input
+                      type="text"
+                      className="landing-auth-input"
+                      placeholder="John Doe"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      disabled={authLoading}
+                      required
+                    />
+                  </div>
+                )}
+                <div className="landing-auth-field">
+                  <label className="landing-auth-label">Email Address</label>
+                  <input
+                    type="email"
+                    className="landing-auth-input"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={authLoading}
+                    required
+                  />
+                </div>
+                <div className="landing-auth-field">
+                  <label className="landing-auth-label">Password</label>
+                  <input
+                    type="password"
+                    className="landing-auth-input"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={authLoading}
+                    required
+                  />
+                </div>
+
+                <button type="submit" className="landing-auth-btn" disabled={authLoading}>
+                  {authLoading ? (
+                    <><span className="google-spinner" style={{ borderColor: 'transparent', borderTopColor: '#fff' }} /> Loading…</>
+                  ) : authMode === 'login' ? (
+                    'Sign In'
+                  ) : (
+                    'Create Account'
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  className="landing-auth-link"
+                  onClick={() => {
+                    setAuthMode(authMode === 'login' ? 'register' : 'login');
+                    setAuthError(null);
+                  }}
+                >
+                  {authMode === 'login'
+                    ? "Don't have an account? Sign up"
+                    : 'Already have an account? Log in'}
+                </button>
+              </form>
+            )}
           </div>
 
           <div className="landing-trust hero-anim" style={{ animationDelay: '480ms' }}>

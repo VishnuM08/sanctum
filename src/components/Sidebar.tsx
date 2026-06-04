@@ -24,6 +24,7 @@ import { useToast } from './Toast';
 import { formatDistanceToNow, isToday } from 'date-fns';
 import type { Page } from '../types';
 import { NotionIcon } from './NotionIcon';
+import { registerBackButtonHandler } from '../utils/backButton';
 
 // ── Section toggle state ────────────────────────────────────────────────────
 interface Sections {
@@ -68,6 +69,45 @@ export function Sidebar() {
     private: false, shared: false, aiDigest: false, vault: false,
   });
   const [draggingId, setDraggingId] = useState<string | null>(null);
+
+  // Back button handler to collapse sidebar if open on mobile
+  useEffect(() => {
+    if (sidebarCollapsed) return;
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+    if (!isMobile) return;
+    
+    return registerBackButtonHandler(() => {
+      toggleSidebar();
+      return true; // consumed
+    });
+  }, [sidebarCollapsed, toggleSidebar]);
+
+  // Back button handler to close TrashModal
+  useEffect(() => {
+    if (!trashOpen) return;
+    return registerBackButtonHandler(() => {
+      setTrashOpen(false);
+      return true; // consumed
+    });
+  }, [trashOpen]);
+
+  // Back button handler to close InboxModal
+  useEffect(() => {
+    if (!inboxOpen) return;
+    return registerBackButtonHandler(() => {
+      setInboxOpen(false);
+      return true; // consumed
+    });
+  }, [inboxOpen]);
+
+  // Back button handler to close ImportModal
+  useEffect(() => {
+    if (!importOpen) return;
+    return registerBackButtonHandler(() => {
+      setImportOpen(false);
+      return true; // consumed
+    });
+  }, [importOpen]);
 
   const resizingRef   = useRef(false);
   const startXRef     = useRef(0);
