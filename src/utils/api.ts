@@ -42,11 +42,18 @@ async function authenticatedFetch(url: string, options: RequestInit = {}): Promi
     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...(options.headers || {}),
   };
+  const method = options.method || 'GET';
+  console.log(`[API Request] ${method} ${url} | Token: ${token ? (token.substring(0, 15) + '...' + token.substring(token.length - 10)) : 'none'}`);
+  
   const res = await fetch(url, {
     ...options,
     headers,
   });
+  
+  console.log(`[API Response] ${method} ${url} | Status: ${res.status}`);
+  
   if (res.status === 401 || res.status === 403) {
+    console.warn(`[API Unauthorized] Token rejected with status ${res.status}. Triggering logout.`);
     if (onUnauthorizedCallback) {
       onUnauthorizedCallback();
     }
@@ -121,6 +128,22 @@ export const api = {
 
   setToken(token: string) {
     localStorage.setItem('vault-jwt-token', token);
+    try {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const base64Url = parts[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        const payload = JSON.parse(jsonPayload);
+        console.log('[API setToken] Saved new JWT token in localStorage. Payload:', payload);
+      } else {
+        console.log('[API setToken] Saved token in localStorage (invalid JWT format):', token);
+      }
+    } catch (e) {
+      console.error('[API setToken] Saved token but failed to parse JWT payload:', e);
+    }
   },
 
   clearToken() {
