@@ -250,3 +250,14 @@ export interface Settings {
   };
 }
 
+export interface Note {
+  id: string;
+  title: string;
+  content: string;
+  aiSummary?: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+  aiGenerated?: boolean;
+}
+

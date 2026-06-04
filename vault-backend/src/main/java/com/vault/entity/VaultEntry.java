@@ -1,5 +1,7 @@
 package com.vault.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -16,6 +18,7 @@ public class VaultEntry {
     @Id
     private UUID id;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -23,6 +26,7 @@ public class VaultEntry {
     @Column(name = "label", nullable = false)
     private String title;
 
+    @JsonProperty("value")
     @Column(name = "encrypted_value", nullable = false, length = 1000)
     private String encryptedValue;
 
