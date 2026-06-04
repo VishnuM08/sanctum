@@ -1378,7 +1378,27 @@ export const useStore = create<StoreState>()(
       signOut: () => {
         vaultKey = null;
         api.logout();
-        set({ isAuthenticated: false, vaultUnlocked: false, vaultEntries: [], activeView: { type: 'home' } });
+        set({
+          isAuthenticated: false,
+          vaultUnlocked: false,
+          vaultEntries: [],
+          vaultEncrypted: [],
+          vaultMeta: { initialized: false, salt: '', verifier: '', autoLockMinutes: 5 },
+          pages: [],
+          databases: [],
+          topLevelPageIds: [],
+          visitHistory: [],
+          inboxItems: [],
+          favoriteOrder: [],
+          user: {
+            id: nanoid(),
+            name: 'You',
+            email: 'you@example.com',
+            avatar: '🧑',
+            color: '#2383e2',
+          },
+          activeView: { type: 'home' }
+        });
       },
 
       // ── Selectors ────────────────────────────────────────────────────────

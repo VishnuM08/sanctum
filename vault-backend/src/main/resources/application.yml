@@ -36,6 +36,9 @@ jwt:
 vault:
   encryption-key: ${VAULT_ENCRYPTION_KEY:my-secure-vault-encryption-key-aes}
 
+security:
+  allow-mock-login: ${SECURITY_ALLOW_MOCK_LOGIN:true}
+
 ollama:
   host: ${OLLAMA_HOST:http://localhost:11434}
   model: ${OLLAMA_MODEL:llama3.2}

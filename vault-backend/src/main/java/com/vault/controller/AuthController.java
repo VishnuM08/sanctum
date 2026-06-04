@@ -5,6 +5,7 @@ import com.vault.entity.User;
 import com.vault.security.UserPrincipal;
 import com.vault.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +16,9 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final UserService userService;
+
+    @Value("${security.allow-mock-login:false}")
+    private boolean allowMockLogin;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody AuthDto.RegisterRequest request) {
@@ -53,6 +57,9 @@ public class AuthController {
             String name;
 
             if (request.getIdToken().startsWith("mock_")) {
+                if (!allowMockLogin) {
+                    throw new RuntimeException("Mock login is disabled in this environment");
+                }
                 // Mock login for local testing/development
                 email = "google-dev@example.com";
                 name = "Google Dev User";
