@@ -23,7 +23,7 @@ import { ImportModal } from './ImportModal';
 import { useToast } from './Toast';
 import { formatDistanceToNow, isToday } from 'date-fns';
 import type { Page } from '../types';
-import { TEMPLATE_CATEGORIES } from '../data/templates';
+import { NotionIcon } from './NotionIcon';
 
 // ── Section toggle state ────────────────────────────────────────────────────
 interface Sections {
@@ -190,7 +190,9 @@ export function Sidebar() {
         <div className="sidebar-inner">
           {/* Workspace header */}
           <div className="workspace-header" onClick={() => navigateToSettings('workspace')}>
-            <div className="workspace-icon">{workspace.icon}</div>
+            <div className="workspace-icon">
+              <NotionIcon icon={workspace.icon} size="1.2em" style={{ display: 'block' }} />
+            </div>
             <span className="workspace-name">{workspace.name}</span>
             <button
               style={{ marginLeft: 'auto', color: 'var(--text-faint)', flexShrink: 0, padding: 4, borderRadius: 4 }}
@@ -256,7 +258,7 @@ export function Sidebar() {
                     className={`template-nav-item ${activeView.type === 'templates' && (activeView as { type: 'templates'; category?: string }).category === cat.label ? 'active' : ''}`}
                     onClick={() => navigate({ type: 'templates', category: cat.label } as { type: 'templates'; category: string })}
                   >
-                    <span>{cat.icon}</span>
+                    <span><NotionIcon icon={cat.icon} size="1.1em" /></span>
                     <span>{cat.label}</span>
                     <span className="template-nav-count">{cat.count}</span>
                   </button>
@@ -505,7 +507,9 @@ function FlatPageRow({ page, depth, showTime, vault, onContextMenu }: {
       title={`Last edited ${formatDistanceToNow(page.updatedAt, { addSuffix: true })}`}
     >
       <span style={{ width: 20, flexShrink: 0 }} />
-      <span className="page-tree-icon" style={{ fontSize: 13 }}>{page.icon || '📄'}</span>
+      <span className="page-tree-icon" style={{ display: 'flex', alignItems: 'center' }}>
+        <NotionIcon icon={page.icon || 'notion_page'} size="13px" />
+      </span>
       <span className="page-tree-title">{page.title || 'Untitled'}</span>
       {vault && page.expiresAt && (
         <span style={{ fontSize: 10, color: 'var(--danger)', marginLeft: 'auto', flexShrink: 0 }}>
@@ -548,7 +552,9 @@ function SortablePageRow(props: { page: Page; depth: number; showTime?: boolean;
         >
           <GripVertical size={12} />
         </span>
-        <span className="page-tree-icon" style={{ fontSize: 13 }}>{page.icon || '📄'}</span>
+        <span className="page-tree-icon" style={{ display: 'flex', alignItems: 'center' }}>
+          <NotionIcon icon={page.icon || 'notion_page'} size="13px" />
+        </span>
         <span className="page-tree-title">{page.title || 'Untitled'}</span>
         <span style={{ fontSize: 10, color: 'var(--text-faint)', marginLeft: 'auto', flexShrink: 0, whiteSpace: 'nowrap' }}>
           {formatDistanceToNow(page.updatedAt, { addSuffix: true })}
@@ -665,8 +671,8 @@ function PageTreeItem({ page, depth, dragListeners, dragAttributes, onContextMen
           <ChevronRight size={12} style={{ transform: page.isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 180ms ease' }} />
         </button>
 
-        <span className="page-tree-icon" style={{ fontSize: 13 }}>
-          {page.databaseId ? <Database size={12} /> : (page.icon || '📄')}
+        <span className="page-tree-icon" style={{ display: 'flex', alignItems: 'center' }}>
+          {page.databaseId ? <Database size={12} /> : <NotionIcon icon={page.icon || 'notion_page'} size="13px" />}
         </span>
 
         <span className="page-tree-title">{page.title || 'Untitled'}</span>

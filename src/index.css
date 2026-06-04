@@ -4727,3 +4727,13 @@ mark.find-highlight-active { background: rgba(255, 159, 0, 0.6); border-radius: 
   .agent-side-col { height: auto; overflow: visible; }
 }
 
+/* ── Notion-style hand-drawn doodles custom styling ──────────────────────── */
+.notion-icon-doodle {
+  mix-blend-mode: multiply;
+  transition: filter 150ms ease;
+}
+
+.dark .notion-icon-doodle {
+  filter: invert(1);
+  mix-blend-mode: screen;
+}

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Search, Plus, BookOpen, Database, CheckSquare, Clock } from 'lucide-react';
 import { useStore } from '../store';
 import { format, isToday, isTomorrow, formatDistanceToNow } from 'date-fns';
+import { NotionIcon } from './NotionIcon';
 
 function greeting(): string {
   return 'Hi';
@@ -78,7 +79,7 @@ export function MorningDigest() {
           {user.avatar && (user.avatar.startsWith('http://') || user.avatar.startsWith('https://')) ? (
             <img src={user.avatar} alt="avatar" style={{ width: 28, height: 28, borderRadius: '50%', verticalAlign: 'middle', marginLeft: 6, objectFit: 'cover' }} />
           ) : (
-            user.avatar && <span style={{ marginLeft: 6 }}>{user.avatar}</span>
+            user.avatar && <NotionIcon icon={user.avatar} size="24px" style={{ marginLeft: 6 }} />
           )}
         </div>
         <div className="digest-date">{format(new Date(), 'EEEE, MMMM d, yyyy')}</div>
@@ -161,7 +162,7 @@ export function MorningDigest() {
               className="digest-page-row"
               onClick={() => navigateToPage(p.id)}
             >
-              <span className="digest-page-icon">{p.icon || '📄'}</span>
+              <span className="digest-page-icon"><NotionIcon icon={p.icon || 'notion_page'} size="1.2em" /></span>
               <span className="digest-page-title">{p.title || 'Untitled'}</span>
               <span className="digest-page-time">
                 {formatDistanceToNow(p.updatedAt, { addSuffix: true })}
@@ -172,7 +173,9 @@ export function MorningDigest() {
 
         {/* Writing prompt */}
         <div className="digest-card digest-prompt-card">
-          <div className="digest-card-title">✏️ Start writing</div>
+          <div className="digest-card-title">
+            <NotionIcon icon="notion_page" size="14px" style={{ marginRight: 6 }} /> Start writing
+          </div>
           <div className="digest-prompt-text">{writingPrompt()}</div>
           <button
             className="digest-action-btn primary"

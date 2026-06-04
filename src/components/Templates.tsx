@@ -5,6 +5,7 @@ import { TEMPLATES, TEMPLATE_CATEGORIES } from '../data/templates';
 import type { Template, TemplateCategory } from '../data/templates';
 import { TEMPLATE_THUMBS } from './TemplateThumb';
 import { useToast } from './Toast';
+import { NotionIcon } from './NotionIcon';
 
 export function Templates() {
   const createPage    = useStore((s) => s.createPage);
@@ -67,7 +68,7 @@ export function Templates() {
             className={`template-cat-btn ${category === 'All' ? 'active' : ''}`}
             onClick={() => setCategory('All')}
           >
-            <span>🗂️</span>
+            <span><NotionIcon icon="notion_folder" size="1.1em" /></span>
             <span>All templates</span>
             <span className="template-cat-count">{TEMPLATES.length}</span>
           </button>
@@ -78,7 +79,7 @@ export function Templates() {
               className={`template-cat-btn ${category === cat.label ? 'active' : ''}`}
               onClick={() => setCategory(cat.label)}
             >
-              <span>{cat.icon}</span>
+              <span><NotionIcon icon={cat.icon} size="1.1em" /></span>
               <span>{cat.label}</span>
               <span className="template-cat-count">{cat.count}</span>
             </button>
@@ -113,7 +114,9 @@ export function Templates() {
                   if (catTemplates.length === 0) return null;
                   return (
                     <div key={cat.label} className="template-section">
-                      <div className="template-section-label">{cat.icon} {cat.label}</div>
+                      <div className="template-section-label">
+                        <NotionIcon icon={cat.icon} size="1.1em" style={{ marginRight: 4 }} /> {cat.label}
+                      </div>
                       <div className="template-grid">
                         {catTemplates.map((t) => (
                           <TemplateCard
@@ -189,7 +192,7 @@ function TemplateCard({ template, onPreview, onUse }: {
           const ThumbComp = TEMPLATE_THUMBS[template.id];
           return ThumbComp
             ? <ThumbComp />
-            : <span className="template-card-icon">{template.icon}</span>;
+            : <span className="template-card-icon"><NotionIcon icon={template.icon} size="1.5em" /></span>;
         })()}
       </div>
 
@@ -234,7 +237,9 @@ function TemplatePreview({ template, onClose, onUse }: {
         {/* Header */}
         <div className="template-preview-header">
           <div>
-            <div className="template-preview-name">{template.icon} {template.name}</div>
+            <div className="template-preview-name">
+              <NotionIcon icon={template.icon} size="1.2em" style={{ marginRight: 6 }} /> {template.name}
+            </div>
             <div className="template-preview-cat">{template.category}</div>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -262,7 +267,7 @@ function TemplatePreview({ template, onClose, onUse }: {
 
         {/* Content preview */}
         <div className="template-preview-content">
-          <div style={{ fontSize: 40, marginBottom: 8 }}>{template.icon}</div>
+          <div style={{ marginBottom: 8 }}><NotionIcon icon={template.icon} size="48px" /></div>
           <div className="template-preview-title">{template.name}</div>
           <div style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 20 }}>{template.description}</div>
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, X } from 'lucide-react';
 import { useStore } from '../store';
 import type { Page } from '../types';
+import { NotionIcon } from './NotionIcon';
 
 interface Props {
   onClose: () => void;
@@ -131,7 +132,7 @@ export function SearchModal({ onClose }: Props) {
                   className={`search-result-item ${filteredPages.length + i === selectedIdx ? 'selected' : ''}`}
                   onClick={() => open({ type: 'database', item: db })}
                 >
-                  <span className="search-result-icon">{db.icon}</span>
+                  <span className="search-result-icon"><NotionIcon icon={db.icon} size="1.2em" /></span>
                   <div className="search-result-text">
                     <div className="search-result-title">{db.title}</div>
                     <div className="search-result-path">Database • {db.rows.length} rows</div>
@@ -161,7 +162,7 @@ function SearchResultItem({ item, selected, path, onClick }: SearchResultItemPro
       className={`search-result-item ${selected ? 'selected' : ''}`}
       onClick={onClick}
     >
-      <span className="search-result-icon">{p.icon || '📄'}</span>
+      <span className="search-result-icon"><NotionIcon icon={p.icon || 'notion_page'} size="1.2em" /></span>
       <div className="search-result-text">
         <div className="search-result-title">{p.title || 'Untitled'}</div>
         {pathStr && <div className="search-result-path">{pathStr}</div>}

@@ -7,6 +7,7 @@ import {
 } from 'react';
 import type { SlashItem } from '../editor/slashCommands';
 import type { SlashMenuProps } from '../editor/SlashCommand';
+import { NotionIcon } from './NotionIcon';
 
 /**
  * Imperative handle the slash-command extension calls into. We can't rely
@@ -107,7 +108,7 @@ function Row({ item, idx, selected, onHover, onClick }: RowProps) {
         onClick();
       }}
     >
-      <span className="icon">{item.icon}</span>
+      <span className="icon"><NotionIcon icon={item.icon} size="1.2em" /></span>
       <span className="meta">
         <span className="label">{item.title}</span>
         <span className="desc">{item.description}</span>

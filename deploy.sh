@@ -63,10 +63,21 @@ if [ -f docker-compose.prod.yml ]; then
   echo "[4/4] Starting services..."
   docker compose -f docker-compose.prod.yml pull
   docker compose -f docker-compose.prod.yml up -d
+  
+  echo "Waiting for Ollama service to start up..."
+  until docker exec vault_ollama ollama list >/dev/null 2>&1; do
+    sleep 2
+  done
+  
+  echo "Pulling Llama 3.2 model in the background..."
+  docker exec -d vault_ollama ollama pull llama3.2
+  
   echo "=== Sanctum services successfully started! ==="
   echo "Spring Boot Server running at: http://localhost:8080"
   echo "Database (Postgres) running at: localhost:5432"
+  echo "✔ Ollama pulling llama3.2 in the background."
 else
   echo "[4/4] Warning: docker-compose.prod.yml not found in ~/sanctum."
   echo "Please make sure to push your code to GitHub and trigger the CI/CD pipeline, which will copy docker-compose.prod.yml automatically!"
 fi
+

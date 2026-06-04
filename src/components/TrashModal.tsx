@@ -1,5 +1,6 @@
 import { X, RotateCcw, Trash2 } from 'lucide-react';
 import { useStore } from '../store';
+import { NotionIcon } from './NotionIcon';
 
 interface Props {
   onClose: () => void;
@@ -29,7 +30,7 @@ export function TrashModal({ onClose }: Props) {
           ) : (
             deletedPages.map((page) => (
               <div key={page.id} className="trash-item">
-                <span className="trash-item-icon">{page.icon}</span>
+                <span className="trash-item-icon"><NotionIcon icon={page.icon || 'notion_page'} size="1.2em" /></span>
                 <span className="trash-item-title">{page.title || 'Untitled'}</span>
                 <div className="trash-item-actions">
                   <button

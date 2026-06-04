@@ -8,6 +8,7 @@ import {
 import { useStore } from '../store';
 import { Editor } from './Editor';
 import { EmojiPicker } from './EmojiPicker';
+import { NotionIcon } from './NotionIcon';
 import { CoverPicker } from './CoverPicker';
 import { DatabaseView } from './DatabaseView';
 import { FindInPage } from './FindInPage';
@@ -159,7 +160,7 @@ export function PageView({ pageId }: Props) {
                   onClick={() => i < breadcrumb.length - 1 && navigateToPage(bp.id)}
                   style={{ cursor: i < breadcrumb.length - 1 ? 'pointer' : 'default' }}
                 >
-                  <span style={{ marginRight: 4 }}>{bp.icon}</span>
+                  <span style={{ marginRight: 4 }}><NotionIcon icon={bp.icon} size="1.1em" /></span>
                   {bp.title || 'Untitled'}
                 </span>
               </span>
@@ -293,7 +294,9 @@ export function PageView({ pageId }: Props) {
           <div className="page-header">
             {page.icon ? (
               <div style={{ position: 'relative', display: 'inline-block' }}>
-                <button className="page-icon-btn" onClick={() => setEmojiPickerOpen((v) => !v)}>{page.icon}</button>
+                <button className="page-icon-btn" onClick={() => setEmojiPickerOpen((v) => !v)}>
+                  <NotionIcon icon={page.icon} size="1.2em" style={{ display: 'block' }} />
+                </button>
                 {emojiPickerOpen && (
                   <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 50, marginTop: 6 }}>
                     <EmojiPicker
@@ -306,8 +309,8 @@ export function PageView({ pageId }: Props) {
               </div>
             ) : (
               <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
-                <button className="page-header-add-btn" onClick={() => { updatePage(page.id, { icon: '📄' }); setEmojiPickerOpen(true); }}>
-                  😊 Add icon
+                <button className="page-header-add-btn" onClick={() => { updatePage(page.id, { icon: 'notion_page' }); setEmojiPickerOpen(true); }}>
+                  <NotionIcon icon="notion_happy" size="14px" style={{ marginRight: 4 }} /> Add icon
                 </button>
                 {!page.cover && (
                   <button className="page-header-add-btn" onClick={() => setCoverPickerOpen(true)}>
@@ -375,7 +378,7 @@ export function PageView({ pageId }: Props) {
               <div className="backlinks-list">
                 {backlinks.map((p) => (
                   <button key={p.id} className="backlink-item" onClick={() => navigateToPage(p.id)}>
-                    <span>{p.icon || '📄'}</span>
+                    <span><NotionIcon icon={p.icon || 'notion_page'} size="1.1em" /></span>
                     <span>{p.title || 'Untitled'}</span>
                   </button>
                 ))}
