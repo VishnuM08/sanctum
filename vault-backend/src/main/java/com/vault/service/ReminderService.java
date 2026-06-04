@@ -28,6 +28,7 @@ public class ReminderService {
         }
 
         Reminder reminder = Reminder.builder()
+                .id(UUID.randomUUID())
                 .user(user)
                 .note(note)
                 .title(request.getTitle())

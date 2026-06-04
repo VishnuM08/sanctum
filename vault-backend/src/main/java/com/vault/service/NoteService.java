@@ -26,6 +26,7 @@ public class NoteService {
     @Transactional
     public Note createNote(User user, NoteDto.NoteRequest request) {
         Note note = Note.builder()
+                .id(UUID.randomUUID())
                 .user(user)
                 .title(request.getTitle())
                 .content(request.getContent())

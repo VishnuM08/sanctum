@@ -27,6 +27,7 @@ public class UserService {
         }
 
         User user = User.builder()
+                .id(UUID.randomUUID())
                 .email(request.getEmail())
                 .name(request.getName())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
@@ -74,6 +75,7 @@ public class UserService {
         User user = userRepository.findByEmail(email)
                 .orElseGet(() -> {
                     User newUser = User.builder()
+                            .id(UUID.randomUUID())
                             .email(email)
                             .name(name)
                             .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))

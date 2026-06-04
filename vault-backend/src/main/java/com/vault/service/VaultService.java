@@ -24,6 +24,7 @@ public class VaultService {
         String encrypted = encryptionService.encrypt(request.getValue());
 
         VaultEntry entry = VaultEntry.builder()
+                .id(UUID.randomUUID())
                 .user(user)
                 .title(request.getTitle())
                 .type(request.getType())
