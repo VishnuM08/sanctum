@@ -625,6 +625,9 @@ export const useStore = create<StoreState>()(
         if (parentToSync && isUuid(parentToSync)) {
           get()._syncPageToBackend(parentToSync);
         }
+        if (realId && isUuid(realId)) {
+          get()._syncPageToBackend(realId);
+        }
       },
 
       // Sync data with REST endpoints

@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import {
   User, Bell, Link, Building, Users, CreditCard,
-  Shield, Sun, Moon, Monitor, Wifi, RefreshCw
+  Shield, Sun, Moon, Monitor
 } from 'lucide-react';
 import { useStore } from '../store';
 import type { SettingsSection } from '../types';
-import { api } from '../utils/api';
-import { Capacitor } from '@capacitor/core';
 
 interface Props {
   section: SettingsSection;
@@ -276,72 +274,6 @@ function NotificationsSection() {
 // ── Connections section ────────────────────────────────────────────────────
 
 function ConnectionsSection() {
-  const syncWithBackend = useStore((s) => s.syncWithBackend);
-  const [serverUrl, setServerUrl] = useState(api.getApiBase());
-  const [serverStatus, setServerStatus] = useState<'idle' | 'checking' | 'online' | 'offline'>('idle');
-  const [serverStatusDetails, setServerStatusDetails] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-
-  const handleTestConnection = async () => {
-    setServerStatus('checking');
-    setServerStatusDetails('Attempting to connect...');
-    
-    // Temporarily save base URL to api to test it (without writing to localStorage)
-    const originalBase = api.getApiBase();
-    
-    try {
-      let formattedUrl = serverUrl.trim();
-      if (formattedUrl && !/^https?:\/\//i.test(formattedUrl)) {
-        formattedUrl = 'http://' + formattedUrl;
-      }
-      
-      api.setApiBase(formattedUrl);
-      const isOnline = await api.checkServer();
-      
-      if (isOnline) {
-        setServerStatus('online');
-        setServerStatusDetails('Connection successful! Server is online.');
-      } else {
-        setServerStatus('offline');
-        setServerStatusDetails('Failed to connect. Please check URL, port, or server firewall.');
-      }
-    } catch (err) {
-      setServerStatus('offline');
-      setServerStatusDetails('Error connecting: ' + (err as Error).message);
-    } finally {
-      // Revert base URL so we don't accidentally save an untested one unless saved
-      api.setApiBase(originalBase);
-    }
-  };
-
-  const handleSaveConnection = async () => {
-    setIsSaving(true);
-    try {
-      let formattedUrl = serverUrl.trim();
-      if (formattedUrl && !/^https?:\/\//i.test(formattedUrl)) {
-        formattedUrl = 'http://' + formattedUrl;
-      }
-      
-      const originalUrl = api.getApiBase();
-      const hasChanged = originalUrl !== formattedUrl;
-
-      api.setApiBase(formattedUrl);
-      
-      if (hasChanged) {
-        useStore.getState().signOut();
-        alert('Server URL updated successfully! Your previous session is invalid on this server. Please sign in to your account on the new server to synchronize your data.');
-      } else {
-        // Trigger a sync instantly
-        await syncWithBackend();
-        alert('Backend server URL saved and sync triggered successfully!');
-      }
-    } catch (err: any) {
-      alert('Saved but failed to sync: ' + err.message);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const integrations = [
     { name: 'GitHub', icon: '🐙', connected: false, desc: 'Link GitHub repos to pages' },
     { name: 'Google Drive', icon: '📁', connected: true, desc: 'Embed Google Docs and Sheets' },
@@ -352,94 +284,6 @@ function ConnectionsSection() {
   return (
     <>
       <h1 className="settings-h1">Connections</h1>
-
-      {/* Backend Cloud Server Connection Configuration */}
-      <h2 className="settings-h2">Ubuntu Cloud Backend</h2>
-      <div style={{
-        padding: '20px',
-        borderRadius: 'var(--radius-lg, 12px)',
-        background: 'rgba(255, 255, 255, 0.02)',
-        border: '1px solid var(--border-color)',
-        marginBottom: '28px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '24px' }}>🌐</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 600, fontSize: '15px' }}>Backend API Server URL</div>
-            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Define the IP or custom domain for your Ubuntu sync server to keep notes synced across all your devices.
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <input
-            type="text"
-            className="server-url-input"
-            style={{ flex: 1, minWidth: '220px' }}
-            placeholder={Capacitor.isNativePlatform() ? "e.g., http://192.168.1.50:8080/api" : "e.g., http://localhost:8080/api"}
-            value={serverUrl}
-            onChange={(e) => setServerUrl(e.target.value)}
-          />
-          <button
-            type="button"
-            className="settings-btn secondary"
-            style={{ height: '42px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
-            onClick={handleTestConnection}
-            disabled={serverStatus === 'checking'}
-          >
-            {serverStatus === 'checking' ? (
-              <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />
-            ) : (
-              <Wifi size={14} />
-            )}
-            Test Connection
-          </button>
-          <button
-            type="button"
-            className="settings-btn primary"
-            style={{ height: '42px', cursor: 'pointer' }}
-            onClick={handleSaveConnection}
-            disabled={isSaving}
-          >
-            {isSaving ? 'Saving...' : 'Save & Sync'}
-          </button>
-        </div>
-
-        {Capacitor.isNativePlatform() && serverUrl.trim() === '' && (
-          <span style={{ fontSize: '12px', color: '#f59e0b' }}>
-            ⚠️ On mobile devices, a custom backend IP/domain is required to sync data with your Ubuntu server.
-          </span>
-        )}
-
-        {(serverStatus !== 'idle' || api.getApiBase()) && (
-          <div className="server-status-indicator" style={{ background: 'rgba(255, 255, 255, 0.01)', border: '1px solid rgba(255, 255, 255, 0.03)' }}>
-            <div className={`status-indicator-dot ${
-              serverStatus === 'checking' ? 'status-dot-checking' :
-              serverStatus === 'online' ? 'status-dot-online' :
-              serverStatus === 'offline' ? 'status-dot-offline' :
-              'status-dot-online'
-            }`} />
-            <div className="server-status-text">
-              <span className="server-status-label">Connection Status</span>
-              <span className="server-status-value">
-                {serverStatus === 'checking' ? 'Testing connection...' :
-                 serverStatus === 'online' ? 'Online' :
-                 serverStatus === 'offline' ? 'Offline / Unreachable' :
-                 'Configured'}
-              </span>
-              {serverStatusDetails && (
-                <span style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                  {serverStatusDetails}
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* Local AI status */}
       <h2 className="settings-h2">AI Assistant</h2>
