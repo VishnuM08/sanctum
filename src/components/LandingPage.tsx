@@ -352,7 +352,7 @@ export function LandingPage() {
           </p>
 
           <div className="landing-auth-card hero-anim" style={{ animationDelay: '400ms' }}>
-            <div className="landing-auth-header" style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+            <div className="landing-auth-header" style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
               <div className="landing-auth-tabs" style={{ flex: 1, margin: 0 }}>
                 <button
                   type="button"
@@ -369,7 +369,27 @@ export function LandingPage() {
                   Vault Account
                 </button>
               </div>
-
+              <button
+                type="button"
+                className="server-settings-btn"
+                onClick={handleOpenServerModal}
+                title="Server Settings"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border)',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <Settings size={18} />
+              </button>
             </div>
 
             {authError && (

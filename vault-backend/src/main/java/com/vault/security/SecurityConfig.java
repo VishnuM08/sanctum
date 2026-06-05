@@ -51,6 +51,9 @@ public class SecurityConfig {
             "http://localhost:[*]",
             "http://127.0.0.1:[*]",
             "http://localhost",
+            "https://localhost",
+            "https://localhost:[*]",
+            "https://127.0.0.1:[*]",
             "capacitor://localhost",
             "https://sanctum.theaignite.app",
             "https://*.theaignite.app"
