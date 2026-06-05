@@ -5681,4 +5681,21 @@ mark.find-highlight-active { background: rgba(255, 159, 0, 0.6); border-radius: 
     border-radius: 0 !important;
     box-shadow: none !important;
   }
+
+  /* Optimize all other screens for mobile edge-to-edge */
+  .templates-page, .vault-container, .calendar-container, .digest-layout, .agent-side-card, .agent-main-col {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+  .settings-content {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+  .home-state {
+    padding: 24px 16px !important;
+  }
 }
