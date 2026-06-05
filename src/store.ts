@@ -827,83 +827,141 @@ export const useStore = create<StoreState>()(
       },
 
       deletePage: (id) => {
+        const collectDescendantIds = (pageId: string, pagesList: any[]): string[] => {
+          const ids: string[] = [pageId];
+          const page = pagesList.find(p => p.id === pageId);
+          if (page && page.children) {
+            page.children.forEach((childId) => {
+              ids.push(...collectDescendantIds(childId, pagesList));
+            });
+          }
+          return ids;
+        };
+
+        const pages = get().pages;
+        const deletedIds = collectDescendantIds(id, pages);
         let parentIdsToSync: string[] = [];
+
         set((s) => {
           const updated = s.pages.map((p) => {
-            if (p.id === id) return { ...p, isDeleted: true, deletedAt: Date.now() };
+            if (deletedIds.includes(p.id)) {
+              return { ...p, isDeleted: true, deletedAt: Date.now() };
+            }
             if (p.children.includes(id)) {
               parentIdsToSync.push(p.id);
               return { ...p, children: p.children.filter((c) => c !== id) };
             }
             return p;
           });
-          const newTopLevel = s.topLevelPageIds.filter((tid) => tid !== id);
+          const newTopLevel = s.topLevelPageIds.filter((tid) => !deletedIds.includes(tid));
           const view = s.activeView;
-          const newView: AppView = view.type === 'page' && view.id === id ? { type: 'home' } : view;
+          const newView: AppView = view.type === 'page' && deletedIds.includes(view.id) ? { type: 'home' } : view;
           return { pages: updated, topLevelPageIds: newTopLevel, activeView: newView };
         });
         
         parentIdsToSync.forEach(pId => get()._syncPageToBackend(pId));
 
-        // Sync soft deletion to backend
-        const page = get().pages.find((p) => p.id === id);
-        if (page && api.getToken() && isUuid(id)) {
-          const matchedDb = page.databaseId ? get().databases.find((db) => db.id === page.databaseId) : undefined;
-          const contentStr = serializePageContent(page, matchedDb);
-          api.updateNote(id, page.title || 'Untitled', contentStr)
-            .catch((err) => console.error('Failed to soft delete page on backend', err));
-        }
+        // Sync soft deletion to backend for all deleted/descendant pages
+        deletedIds.forEach((dId) => {
+          const page = get().pages.find((p) => p.id === dId);
+          if (page && api.getToken() && isUuid(dId)) {
+            const matchedDb = page.databaseId ? get().databases.find((db) => db.id === page.databaseId) : undefined;
+            const contentStr = serializePageContent(page, matchedDb);
+            api.updateNote(dId, page.title || 'Untitled', contentStr)
+              .catch((err) => console.error(`Failed to soft delete page ${dId} on backend`, err));
+          }
+        });
       },
 
       restorePage: (id) => {
+        const collectDescendantIds = (pageId: string, pagesList: any[]): string[] => {
+          const ids: string[] = [pageId];
+          const page = pagesList.find(p => p.id === pageId);
+          if (page && page.children) {
+            page.children.forEach((childId) => {
+              ids.push(...collectDescendantIds(childId, pagesList));
+            });
+          }
+          return ids;
+        };
+
+        const pages = get().pages;
+        const restoredIds = collectDescendantIds(id, pages);
         let parentToSync: string | null = null;
+
         set((s) => {
           const page = s.pages.find((p) => p.id === id);
           if (!page) return s;
+
           const updated = s.pages.map((p) =>
-            p.id === id ? { ...p, isDeleted: false, deletedAt: undefined } : p
+            restoredIds.includes(p.id) ? { ...p, isDeleted: false, deletedAt: undefined } : p
           );
+
           const parentId = page.parentId;
           if (!parentId) {
-            return { pages: updated, topLevelPageIds: [id, ...s.topLevelPageIds] };
+            return { pages: updated, topLevelPageIds: [id, ...s.topLevelPageIds.filter(tid => tid !== id)] };
           }
           const parentExists = updated.find((p) => p.id === parentId && !p.isDeleted);
           if (!parentExists) {
             return {
               pages: updated.map((p) => p.id === id ? { ...p, parentId: null } : p),
-              topLevelPageIds: [id, ...s.topLevelPageIds],
+              topLevelPageIds: [id, ...s.topLevelPageIds.filter(tid => tid !== id)],
             };
           }
           parentToSync = parentId;
           return {
             pages: updated.map((p) =>
-              p.id === parentId ? { ...p, children: [...p.children, id] } : p
+              p.id === parentId ? { ...p, children: [...p.children.filter(c => c !== id), id] } : p
             ),
           };
         });
 
         if (parentToSync) get()._syncPageToBackend(parentToSync);
 
-        // Sync restoration to backend
-        const page = get().pages.find((p) => p.id === id);
-        if (page && api.getToken() && isUuid(id)) {
-          const matchedDb = page.databaseId ? get().databases.find((db) => db.id === page.databaseId) : undefined;
-          const contentStr = serializePageContent(page, matchedDb);
-          api.updateNote(id, page.title || 'Untitled', contentStr)
-            .catch((err) => console.error('Failed to restore page on backend', err));
-        }
+        // Sync restoration to backend for all restored pages
+        restoredIds.forEach((rId) => {
+          const page = get().pages.find((p) => p.id === rId);
+          if (page && api.getToken() && isUuid(rId)) {
+            const matchedDb = page.databaseId ? get().databases.find((db) => db.id === page.databaseId) : undefined;
+            const contentStr = serializePageContent(page, matchedDb);
+            api.updateNote(rId, page.title || 'Untitled', contentStr)
+              .catch((err) => console.error(`Failed to restore page ${rId} on backend`, err));
+          }
+        });
       },
 
       permanentlyDeletePage: (id) => {
-        set((s) => ({
-          pages: s.pages.filter((p) => p.id !== id),
-        }));
+        const collectDescendantIds = (pageId: string, pagesList: any[]): string[] => {
+          const ids: string[] = [pageId];
+          const page = pagesList.find(p => p.id === pageId);
+          if (page && page.children) {
+            page.children.forEach((childId) => {
+              ids.push(...collectDescendantIds(childId, pagesList));
+            });
+          }
+          return ids;
+        };
 
-        // Trigger permanent hard-delete on backend
-        if (api.getToken() && isUuid(id)) {
-          api.deleteNote(id)
-            .catch((err) => console.error('Failed to permanently delete page on backend', err));
-        }
+        const pages = get().pages;
+        const deletedIds = collectDescendantIds(id, pages);
+
+        set((s) => {
+          const view = s.activeView;
+          const newView: AppView = view.type === 'page' && deletedIds.includes(view.id) ? { type: 'home' } : view;
+          return {
+            pages: s.pages.filter((p) => !deletedIds.includes(p.id)),
+            topLevelPageIds: s.topLevelPageIds.filter((tid) => !deletedIds.includes(tid)),
+            activeView: newView,
+          };
+        });
+
+        // Trigger permanent hard-delete on backend for all collected IDs
+        deletedIds.forEach((pId) => {
+          if (api.getToken() && isUuid(pId)) {
+            api.deleteNote(pId)
+              .catch((err) => console.error(`Failed to permanently delete page ${pId} on backend`, err));
+          }
+        });
       },
 
       toggleFavorite: (id) => {

@@ -34,3 +34,10 @@ android/app/src/main/assets/capacitor.config.json
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Secrets and Signing Keys
+key/
+
+# Built Packages and Bundles
+*.apk
+*.aab

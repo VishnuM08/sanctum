@@ -1,0 +1,68 @@
+name: Build and Release Android App to Play Store
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on release tags (e.g. v1.0.0, v1.1.2)
+  workflow_dispatch: # Allows manual trigger from the GitHub Actions tab
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install Node Dependencies
+        run: pnpm install
+
+      - name: Build Web Production Bundle
+        run: pnpm build
+
+      - name: Set up Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Sync Web Assets to Capacitor Android
+        run: npx cap sync android
+
+      - name: Build Release App Bundle (AAB)
+        working-directory: android
+        run: ./gradlew :app:bundleRelease
+
+      - name: Sign Release App Bundle (AAB)
+        id: sign_aab
+        uses: r0adrunner/sign-android-release@v1
+        with:
+          releaseDirectory: android/app/build/outputs/bundle/release
+          signingKeyBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          alias: ${{ secrets.ANDROID_KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Upload Release to Google Play Console
+        uses: r0adrunner/upload-google-play@v1.1.2
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.sanctum.app
+          releaseFiles: ${{ steps.sign_aab.outputs.signedReleaseFile }}
+          track: internal # Options: internal, alpha, beta, production
+          status: completed

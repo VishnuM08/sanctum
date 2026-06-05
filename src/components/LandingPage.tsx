@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useStore } from '../store';
 import { Capacitor } from '@capacitor/core';
+import { GoogleSignIn } from '@capawesome/capacitor-google-sign-in';
 import { api } from '../utils/api';
 import {
   GoogleIcon, AppMockup, BrandLogo,
@@ -171,12 +172,36 @@ export function LandingPage() {
 
   const doGoogleSignIn = async () => {
     setSigningIn(true);
-    // Simulated sign-in — no real OAuth. Drops you straight into the app.
+    setAuthError(null);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 850));
-      await signInRef.current({ name: 'Vishnu', email: 'vishnu.magesh@gmail.com', avatar: '🧑‍💻' });
+      if (Capacitor.isNativePlatform()) {
+        await GoogleSignIn.initialize({
+          clientId: '335592680836-vgpg4tlh2rip0ij37qq2ao4o2sm3tesc.apps.googleusercontent.com',
+        });
+        const result = await GoogleSignIn.signIn();
+        const idToken = result.idToken;
+        if (!idToken) throw new Error('No identity token returned from native Google Sign-In');
+
+        const base64Url = idToken.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        const payload = JSON.parse(jsonPayload);
+        
+        const name = payload.name || payload.email.split('@')[0];
+        const email = payload.email;
+        const avatar = payload.picture || '🧑‍💻';
+
+        await signInRef.current({ name, email, avatar }, idToken);
+      } else {
+        // Simulated sign-in — no real OAuth on Web. Drops you straight into the app.
+        await new Promise((resolve) => setTimeout(resolve, 850));
+        await signInRef.current({ name: 'Vishnu', email: 'vishnu.magesh@gmail.com', avatar: '🧑‍💻' }, 'mock_web_token');
+      }
     } catch (err: any) {
-      console.error('Mock login failed:', err);
+      console.error('Google Sign-In failed:', err);
+      setAuthError(err.message || 'Google Login failed. Please verify your internet connection and Play Services configuration.');
     } finally {
       setSigningIn(false);
     }

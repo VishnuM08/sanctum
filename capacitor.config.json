@@ -1,5 +1,10 @@
 {
   "appId": "com.sanctum.app",
   "appName": "Notebook",
-  "webDir": "dist"
+  "webDir": "dist",
+  "plugins": {
+    "GoogleSignIn": {
+      "clientId": "335592680836-vgpg4tlh2rip0ij37qq2ao4o2sm3tesc.apps.googleusercontent.com"
+    }
+  }
 }
