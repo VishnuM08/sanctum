@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   User, Bell, Link, Building, Users, CreditCard,
-  Shield, Sun, Moon, Monitor, ArrowLeft
+  Shield, Sun, Moon, Monitor, ArrowLeft, ChevronRight
 } from 'lucide-react';
 import { useStore } from '../store';
 import { api } from '../utils/api';
@@ -23,6 +23,9 @@ const NAV_ITEMS: { section: SettingsSection; label: string; icon: React.ReactNod
 
 export function Settings({ section: initialSection }: Props) {
   const [section, setSection] = useState<SettingsSection>(initialSection);
+  const [isMobile, setIsMobile] = useState(false);
+  const [showMobileList, setShowMobileList] = useState(true);
+
   const settings = useStore((s) => s.settings);
   const updateSettings = useStore((s) => s.updateSettings);
   const workspace = useStore((s) => s.workspace);
@@ -31,6 +34,17 @@ export function Settings({ section: initialSection }: Props) {
   const navigateToSettings = useStore((s) => s.navigateToSettings);
   const viewHistory = useStore((s) => s.viewHistory);
   const navigate = useStore((s) => s.navigate);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (!mobile) setShowMobileList(false);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const goBack = () => {
     if (viewHistory.length > 0) {
@@ -47,51 +61,70 @@ export function Settings({ section: initialSection }: Props) {
   const groups = ['Account', 'Workspace'];
 
   return (
-    <div className="settings-layout-container">
+    <div className={`settings-layout-container ${isMobile ? 'is-mobile' : ''} ${isMobile && showMobileList ? 'mobile-list-view' : 'mobile-detail-view'}`}>
       {/* Mobile Settings Header */}
       <div className="settings-mobile-header">
-        <button className="settings-back-btn" onClick={goBack} title="Back">
+        <button className="settings-back-btn" onClick={() => {
+          if (isMobile && !showMobileList) {
+            setShowMobileList(true);
+          } else {
+            goBack();
+          }
+        }} title="Back">
           <ArrowLeft size={18} />
         </button>
-        <span className="settings-header-title">Settings</span>
+        <span className="settings-header-title">
+          {isMobile && !showMobileList ? NAV_ITEMS.find(i => i.section === section)?.label : 'Settings'}
+        </span>
       </div>
 
       <div className="settings-layout">
         {/* Sidebar */}
-        <div className="settings-sidebar">
-          {groups.map((group) => (
-            <div key={group} style={{ display: 'contents' }}>
-              <div className="settings-section-label">{group}</div>
-              {NAV_ITEMS.filter((i) => i.group === group).map((item) => (
-                <button
-                  key={item.section}
-                  className={`settings-nav-item ${section === item.section ? 'active' : ''}`}
-                  onClick={() => { setSection(item.section); navigateToSettings(item.section); }}
-                >
-                  {item.icon}
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          ))}
-        </div>
+        {(!isMobile || showMobileList) && (
+          <div className="settings-sidebar">
+            {groups.map((group) => (
+              <div key={group} style={{ display: 'contents' }}>
+                <div className="settings-section-label">{group}</div>
+                {NAV_ITEMS.filter((i) => i.group === group).map((item) => (
+                  <button
+                    key={item.section}
+                    className={`settings-nav-item ${section === item.section ? 'active' : ''}`}
+                    onClick={() => { 
+                      setSection(item.section); 
+                      navigateToSettings(item.section); 
+                      if (isMobile) setShowMobileList(false);
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                      {item.icon}
+                      <span>{item.label}</span>
+                    </div>
+                    {isMobile && <ChevronRight size={16} style={{ color: 'var(--text-faint)' }} />}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Content */}
-        <div className="settings-content">
-        {section === 'account' && (
-          <AccountSection user={user} settings={settings} updateSettings={updateSettings} />
+        {(!isMobile || !showMobileList) && (
+          <div className="settings-content">
+            {section === 'account' && (
+              <AccountSection user={user} settings={settings} updateSettings={updateSettings} />
+            )}
+            {section === 'notifications' && <NotificationsSection />}
+            {section === 'connections' && <ConnectionsSection />}
+            {section === 'workspace' && (
+              <WorkspaceSection workspace={workspace} updateWorkspace={updateWorkspace} />
+            )}
+            {section === 'members' && <MembersSection />}
+            {section === 'billing' && <BillingSection />}
+            {section === 'security' && <SecuritySection />}
+          </div>
         )}
-        {section === 'notifications' && <NotificationsSection />}
-        {section === 'connections' && <ConnectionsSection />}
-        {section === 'workspace' && (
-          <WorkspaceSection workspace={workspace} updateWorkspace={updateWorkspace} />
-        )}
-        {section === 'members' && <MembersSection />}
-        {section === 'billing' && <BillingSection />}
-        {section === 'security' && <SecuritySection />}
       </div>
     </div>
-  </div>
   );
 }
 
