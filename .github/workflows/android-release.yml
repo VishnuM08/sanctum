@@ -17,7 +17,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 9
+          version: 11
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -26,7 +26,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install Node Dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
 
       - name: Build Web Production Bundle
         run: pnpm build
