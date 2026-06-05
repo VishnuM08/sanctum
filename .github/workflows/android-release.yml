@@ -50,7 +50,7 @@ jobs:
 
       - name: Sign Release App Bundle (AAB)
         id: sign_aab
-        uses: r0adrunner/sign-android-release@v1
+        uses: r0adkll/sign-android-release@v1
         with:
           releaseDirectory: android/app/build/outputs/bundle/release
           signingKeyBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -59,7 +59,7 @@ jobs:
           keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
       - name: Upload Release to Google Play Console
-        uses: r0adrunner/upload-google-play@v1.1.2
+        uses: r0adkll/upload-google-play@v1.1.2
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.theaignite.sanctum
