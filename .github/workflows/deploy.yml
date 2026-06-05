@@ -129,27 +129,4 @@ jobs:
           # Clean up old images
           docker image prune -af
 
-      - name: Debug Deployment and Expose Logs
-        run: |
-          cd ~/sanctum
-          echo "Waiting 15s for backend container startup..."
-          sleep 15
-          echo "=== DEPLOYMENT DEBUG LOGS ===" > logs.txt
-          echo "Date: $(date)" >> logs.txt
-          echo "" >> logs.txt
-          echo "=== DOCKER PROCESSES ===" >> logs.txt
-          docker ps -a >> logs.txt
-          echo "" >> logs.txt
-          echo "=== BACKEND LOGS ===" >> logs.txt
-          docker logs vault_backend --tail 300 >> logs.txt
-          echo "" >> logs.txt
-          echo "=== REDIS LOGS ===" >> logs.txt
-          docker logs vault_redis --tail 50 >> logs.txt
-          echo "" >> logs.txt
-          echo "=== TUNNEL LOGS ===" >> logs.txt
-          docker logs vault_tunnel --tail 100 >> logs.txt
-          
-          echo "Copying logs to frontend container..."
-          docker cp logs.txt vault_frontend:/usr/share/nginx/html/log.txt || true
-          rm logs.txt
 
