@@ -167,13 +167,7 @@ export function LandingPage() {
     signInRef.current = signIn;
   }, [signIn]);
 
-  useEffect(() => {
-    // On native mobile devices, if no custom server URL has been set,
-    // automatically pop open the Server Connection dialog to guide them.
-    if (Capacitor.isNativePlatform() && api.getApiBase() === '') {
-      handleOpenServerModal();
-    }
-  }, []);
+
 
   const doGoogleSignIn = async () => {
     setSigningIn(true);
@@ -350,14 +344,7 @@ export function LandingPage() {
                   Vault Account
                 </button>
               </div>
-              <button
-                type="button"
-                className="server-config-btn"
-                onClick={handleOpenServerModal}
-                title="Configure Backend Server URL"
-              >
-                <Settings size={18} />
-              </button>
+
             </div>
 
             {authError && (

@@ -26,7 +26,9 @@ const getDefaultApiBase = () => {
 };
 
 
-let API_BASE = localStorage.getItem('vault-api-server-url') || getDefaultApiBase();
+let API_BASE = Capacitor.isNativePlatform()
+  ? 'https://sanctum-api.theaignite.app/api'
+  : (localStorage.getItem('vault-api-server-url') || getDefaultApiBase());
 
 // Connection status cache
 let isServerOnline = false;
