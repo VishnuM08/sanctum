@@ -5754,4 +5754,78 @@ mark.find-highlight-active { background: rgba(255, 159, 0, 0.6); border-radius: 
   .digest-hero {
     margin-top: 16px;
   }
+
+  /* --- DEEP NATIVE AESTHETICS --- */
+  :root {
+    --bg-mobile-app: #f2f2f7;
+    --border-hairline: rgba(0, 0, 0, 0.1);
+  }
+  .dark {
+    --bg-mobile-app: #000000;
+    --border-hairline: rgba(255, 255, 255, 0.15);
+  }
+
+  body {
+    background-color: var(--bg-mobile-app) !important;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  
+  .app, .main {
+    background: transparent !important;
+  }
+
+  .page-container, .digest-card, .settings-content, .board-card, .template-preview-panel, .settings-sidebar, .search-modal {
+    background-color: var(--bg-app) !important;
+  }
+
+  .topbar, .settings-mobile-header, .templates-header {
+    background: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 0.5px solid var(--border-hairline) !important;
+  }
+  .dark .topbar, .dark .settings-mobile-header, .dark .templates-header {
+    background: rgba(28, 28, 30, 0.8) !important;
+  }
+
+  .mobile-bottom-nav {
+    background: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-top: 0.5px solid var(--border-hairline) !important;
+    padding-bottom: env(safe-area-inset-bottom, 20px) !important;
+    height: calc(56px + env(safe-area-inset-bottom, 20px)) !important;
+  }
+  .dark .mobile-bottom-nav {
+    background: rgba(28, 28, 30, 0.8) !important;
+  }
+
+  .settings-nav-item:active, .digest-action-btn:active, .mobile-bottom-nav-item:active {
+    opacity: 0.5;
+    transition: none;
+  }
+
+  /* Native Mobile Search Bottom Sheet */
+  .search-overlay {
+    align-items: flex-end !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  .search-modal {
+    width: 100% !important;
+    max-height: 85vh !important;
+    height: 85vh !important;
+    border-radius: 20px 20px 0 0 !important;
+    border: none !important;
+    animation: slideUpBottomSheet 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards !important;
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+}
+
+@keyframes slideUpBottomSheet {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
