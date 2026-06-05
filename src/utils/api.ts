@@ -3,11 +3,10 @@ import { Capacitor } from '@capacitor/core';
 
 const getDefaultApiBase = () => {
   if (typeof window !== 'undefined') {
-    // On native mobile platforms (Android/iOS), window.location.hostname is always 'localhost'.
-    // If we connect to localhost:8080, it points back to the mobile device itself, where no backend runs.
-    // Hence we return an empty string to prompt the user to configure their real Ubuntu server domain or IP.
+    // On native mobile platforms (Android/iOS), we default to the production server URL
+    // so that the mobile app connects seamlessly behind the scenes out-of-the-box.
     if (Capacitor.isNativePlatform()) {
-      return '';
+      return 'https://sanctum-api.theaignite.app/api';
     }
 
     const hostname = window.location.hostname;
