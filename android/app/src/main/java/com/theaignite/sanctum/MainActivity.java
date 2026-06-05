@@ -1,4 +1,4 @@
-package com.sanctum.app;
+package com.theaignite.sanctum;
 
 import com.getcapacitor.BridgeActivity;
 

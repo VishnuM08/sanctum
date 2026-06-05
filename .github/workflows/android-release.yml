@@ -62,7 +62,7 @@ jobs:
         uses: r0adrunner/upload-google-play@v1.1.2
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: com.sanctum.app
+          packageName: com.theaignite.sanctum
           releaseFiles: ${{ steps.sign_aab.outputs.signedReleaseFile }}
           track: internal # Options: internal, alpha, beta, production
           status: completed

@@ -1,5 +1,5 @@
 {
-  "appId": "com.sanctum.app",
+  "appId": "com.theaignite.sanctum",
   "appName": "Notebook",
   "webDir": "dist",
   "plugins": {

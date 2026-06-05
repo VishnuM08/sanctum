@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">Notebook</string>
     <string name="title_activity_main">Notebook</string>
-    <string name="package_name">com.sanctum.app</string>
-    <string name="custom_url_scheme">com.sanctum.app</string>
+    <string name="package_name">com.theaignite.sanctum</string>
+    <string name="custom_url_scheme">com.theaignite.sanctum</string>
 </resources>
