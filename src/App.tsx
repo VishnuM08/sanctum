@@ -13,6 +13,8 @@ import { LandingPage } from './components/LandingPage';
 import { AIAgentChat } from './components/AIAgentChat';
 import { useStore } from './store';
 import { handleBackButton, registerBackButtonHandler } from './utils/backButton';
+import { OnboardingTour } from './components/OnboardingTour';
+
 
 export default function App() {
   const activeView      = useStore((s) => s.activeView);
@@ -245,6 +247,7 @@ export default function App() {
       {/* Overlay modals */}
       {searchOpen    && <SearchModal onClose={() => setSearchOpen(false)} />}
       {shortcutsOpen && <KeyboardShortcutsModal onClose={() => setShortcutsOpen(false)} />}
+      <OnboardingTour />
 
       {zenMode && (
         <button

@@ -275,7 +275,7 @@ export function Sidebar() {
 
           {/* Primary nav */}
           <div className="sidebar-nav">
-            <button className="sidebar-nav-item" style={{ color: 'var(--accent)', fontWeight: 500 }} onClick={() => handleMobileNav(() => createPage())}>
+            <button id="tour-add-page" className="sidebar-nav-item" style={{ color: 'var(--accent)', fontWeight: 500 }} onClick={() => handleMobileNav(() => createPage())}>
               <span className="nav-icon"><Plus size={14} style={{ color: 'var(--accent)' }} /></span>
               <span>Add a page</span>
             </button>
@@ -295,12 +295,12 @@ export function Sidebar() {
               <span>Inbox</span>
               {unreadCount > 0 && <span className="filter-badge" style={{ marginLeft: 'auto' }}>{unreadCount}</span>}
             </button>
-            <button className={`sidebar-nav-item ${activeView.type === 'vault' ? 'active' : ''}`} onClick={() => handleMobileNav(() => navigate({ type: 'vault' }))}>
+            <button id="tour-vault" className={`sidebar-nav-item ${activeView.type === 'vault' ? 'active' : ''}`} onClick={() => handleMobileNav(() => navigate({ type: 'vault' }))}>
               <span className="nav-icon"><ShieldCheck size={14} /></span>
               <span>Vault</span>
               {vaultInitialized && !vaultUnlocked && <Lock size={11} style={{ marginLeft: 'auto', color: 'var(--text-faint)' }} />}
             </button>
-            <button className={`sidebar-nav-item ${activeView.type === 'agent' ? 'active' : ''}`} onClick={() => handleMobileNav(() => navigate({ type: 'agent' }))}>
+            <button id="tour-agent" className={`sidebar-nav-item ${activeView.type === 'agent' ? 'active' : ''}`} onClick={() => handleMobileNav(() => navigate({ type: 'agent' }))}>
               <span className="nav-icon"><Bot size={14} /></span>
               <span>AI Agent</span>
             </button>

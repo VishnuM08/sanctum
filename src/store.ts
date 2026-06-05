@@ -440,7 +440,7 @@ export const useStore = create<StoreState>()(
           if (serverNotes.length === 0) {
             // Generate a beautiful, rich "Getting Started Guide" page for first-time users
             const defaultId = nanoid();
-            const defaultCover = { type: 'gradient', value: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', position: 50 };
+            const defaultCover = { type: 'url', value: 'https://images.unsplash.com/photo-1448375240586-882707db888b?q=80&w=800&auto=format&fit=crop', position: 50 };
             
             const onboardingContent = {
               type: 'doc',
