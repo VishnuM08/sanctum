@@ -46,7 +46,9 @@ jobs:
 
       - name: Build Release App Bundle (AAB)
         working-directory: android
-        run: ./gradlew :app:bundleRelease
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:bundleRelease
 
       - name: Sign Release App Bundle (AAB)
         id: sign_aab
