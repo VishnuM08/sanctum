@@ -51,7 +51,7 @@ export function LandingPage() {
   const [googleReady, setGoogleReady] = useState(false);
 
   // Unified Auth state
-  const [authMethod, setAuthMethod] = useState<'google' | 'vault'>('google');
+  const [authMethod, setAuthMethod] = useState<'google' | 'vault'>('vault');
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [otpStep, setOtpStep] = useState(false);
   const [name, setName] = useState('');
@@ -313,12 +313,9 @@ export function LandingPage() {
             <a href="#security">Security</a>
             <a href="#templates">Templates</a>
           </nav>
-          <div id="googleBtnNav" style={{ display: googleReady ? 'block' : 'none' }} />
-          {!googleReady && (
-            <button className="landing-signin-sm" onClick={() => { setAuthMethod('vault'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} disabled={signingIn}>
-              Sign in
-            </button>
-          )}
+          <button className="landing-signin-sm" onClick={() => { window.scrollTo({ top: 340, behavior: 'smooth' }); }} disabled={signingIn}>
+            Sign in
+          </button>
         </div>
       </header>
 
@@ -339,22 +336,9 @@ export function LandingPage() {
           </p>
 
           <div className="landing-auth-card hero-anim" style={{ animationDelay: '400ms' }}>
-            <div className="landing-auth-header" style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-              <div className="landing-auth-tabs" style={{ flex: 1, margin: 0 }}>
-                <button
-                  type="button"
-                  className={`landing-auth-tab ${authMethod === 'google' ? 'active' : ''}`}
-                  onClick={() => { setAuthMethod('google'); setAuthError(null); setOtpStep(false); }}
-                >
-                  Google Login
-                </button>
-                <button
-                  type="button"
-                  className={`landing-auth-tab ${authMethod === 'vault' ? 'active' : ''}`}
-                  onClick={() => { setAuthMethod('vault'); setAuthError(null); }}
-                >
-                  Vault Account
-                </button>
+            <div className="landing-auth-header" style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
+              <div style={{ flex: 1, margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                Sign in to your Vault Account
               </div>
               <button
                 type="button"
@@ -373,23 +357,7 @@ export function LandingPage() {
               </div>
             )}
 
-            {authMethod === 'google' ? (
-              <div className="landing-cta" style={{ margin: 0, width: '100%' }}>
-                <div id="googleBtnHero" style={{ display: googleReady ? 'block' : 'none', height: 40, width: '100%' }} />
-                {!googleReady && (
-                  <button className="google-btn" style={{ width: '100%' }} onClick={doGoogleSignIn} disabled={signingIn}>
-                    {signingIn ? (
-                      <><span className="google-spinner" /> Signing in…</>
-                    ) : (
-                      <><GoogleIcon size={18} /> Continue with Google</>
-                    )}
-                  </button>
-                )}
-                <span className="landing-cta-note" style={{ textAlign: 'center', width: '100%' }}>
-                  Sign in securely with Google to access your workspace
-                </span>
-              </div>
-            ) : otpStep ? (
+            {otpStep ? (
               <form onSubmit={handleOtpVerifySubmit} className="otp-container">
                 <div className="otp-description">
                   A 6-digit verification code has been sent to <strong>{email}</strong>.
@@ -568,15 +536,10 @@ export function LandingPage() {
       <section className="landing-final">
         <Reveal>
           <h2 className="landing-h2" style={{ color: '#fff' }}>Ready to get organized?</h2>
-          <p className="landing-final-sub">Jump in — it takes one click.</p>
-          <div style={{ display: googleReady ? 'inline-flex' : 'none', justifyContent: 'center', height: 40 }}>
-            <div id="googleBtnFinal" />
-          </div>
-          {!googleReady && (
-            <button className="google-btn light" onClick={doGoogleSignIn} disabled={signingIn}>
-              {signingIn ? <><span className="google-spinner dark" /> Signing in…</> : <><GoogleIcon size={18} /> Continue with Google <ArrowRight size={16} /></>}
-            </button>
-          )}
+          <p className="landing-final-sub">Create your account — it takes seconds.</p>
+          <button className="google-btn light" style={{ width: 'auto', padding: '0 24px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => window.scrollTo({ top: 340, behavior: 'smooth' })}>
+            Get Started <ArrowRight size={16} style={{ marginLeft: 8 }} />
+          </button>
         </Reveal>
       </section>
 

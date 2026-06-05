@@ -72,6 +72,13 @@ export function Sidebar() {
   });
   const [draggingId, setDraggingId] = useState<string | null>(null);
 
+  const handleMobileNav = (action: () => void) => {
+    action();
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+      useStore.setState({ sidebarCollapsed: true });
+    }
+  };
+
   // Back button handler to collapse sidebar if open on mobile
   useEffect(() => {
     if (sidebarCollapsed) return;
@@ -217,6 +224,9 @@ export function Sidebar() {
     return () => document.removeEventListener('click', close);
   }, [contextMenu]);
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+  const sidebarWidthToUse = isMobile ? 'var(--sidebar-width)' : (sidebarCollapsed ? 0 : sidebarWidth);
+
   return (
     <>
       {sidebarCollapsed && (
@@ -227,7 +237,7 @@ export function Sidebar() {
 
       <aside
         className={`sidebar ${sidebarCollapsed ? 'collapsed' : 'mobile-open'}`}
-        style={{ width: sidebarCollapsed ? 0 : sidebarWidth }}
+        style={{ width: sidebarWidthToUse }}
       >
         <div className="sidebar-inner">
           {!isServerOnline && (
@@ -237,7 +247,7 @@ export function Sidebar() {
             </div>
           )}
           {/* Workspace header */}
-          <div className="workspace-header" onClick={() => navigateToSettings('workspace')}>
+          <div className="workspace-header" onClick={() => handleMobileNav(() => navigateToSettings('workspace'))}>
             <div 
               className="workspace-icon" 
               style={{ 
@@ -265,32 +275,32 @@ export function Sidebar() {
 
           {/* Primary nav */}
           <div className="sidebar-nav">
-            <button className="sidebar-nav-item" style={{ color: 'var(--accent)', fontWeight: 500 }} onClick={() => createPage()}>
+            <button className="sidebar-nav-item" style={{ color: 'var(--accent)', fontWeight: 500 }} onClick={() => handleMobileNav(() => createPage())}>
               <span className="nav-icon"><Plus size={14} style={{ color: 'var(--accent)' }} /></span>
               <span>Add a page</span>
             </button>
-            <button className="sidebar-nav-item" onClick={() => setSearchOpen(true)}>
+            <button className="sidebar-nav-item" onClick={() => handleMobileNav(() => setSearchOpen(true))}>
               <span className="nav-icon"><Search size={14} /></span>
               <span>Search</span>
               <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-faint)' }}>⌘K</span>
             </button>
-            <button className={`sidebar-nav-item ${activeView.type === 'home' ? 'active' : ''}`} onClick={() => navigate({ type: 'home' })}>
+            <button className={`sidebar-nav-item ${activeView.type === 'home' ? 'active' : ''}`} onClick={() => handleMobileNav(() => navigate({ type: 'home' }))}>
               <span className="nav-icon"><Home size={14} /></span><span>Home</span>
             </button>
-            <button className={`sidebar-nav-item ${activeView.type === 'calendar' ? 'active' : ''}`} onClick={() => navigate({ type: 'calendar' })}>
+            <button className={`sidebar-nav-item ${activeView.type === 'calendar' ? 'active' : ''}`} onClick={() => handleMobileNav(() => navigate({ type: 'calendar' }))}>
               <span className="nav-icon"><CalendarDays size={14} /></span><span>Calendar</span>
             </button>
-            <button className="sidebar-nav-item" onClick={() => setInboxOpen(true)}>
+            <button className="sidebar-nav-item" onClick={() => handleMobileNav(() => setInboxOpen(true))}>
               <span className="nav-icon"><Bell size={14} /></span>
               <span>Inbox</span>
               {unreadCount > 0 && <span className="filter-badge" style={{ marginLeft: 'auto' }}>{unreadCount}</span>}
             </button>
-            <button className={`sidebar-nav-item ${activeView.type === 'vault' ? 'active' : ''}`} onClick={() => navigate({ type: 'vault' })}>
+            <button className={`sidebar-nav-item ${activeView.type === 'vault' ? 'active' : ''}`} onClick={() => handleMobileNav(() => navigate({ type: 'vault' }))}>
               <span className="nav-icon"><ShieldCheck size={14} /></span>
               <span>Vault</span>
               {vaultInitialized && !vaultUnlocked && <Lock size={11} style={{ marginLeft: 'auto', color: 'var(--text-faint)' }} />}
             </button>
-            <button className={`sidebar-nav-item ${activeView.type === 'agent' ? 'active' : ''}`} onClick={() => navigate({ type: 'agent' })}>
+            <button className={`sidebar-nav-item ${activeView.type === 'agent' ? 'active' : ''}`} onClick={() => handleMobileNav(() => navigate({ type: 'agent' }))}>
               <span className="nav-icon"><Bot size={14} /></span>
               <span>AI Agent</span>
             </button>
@@ -310,7 +320,7 @@ export function Sidebar() {
               <div className="templates-nav-dropdown">
                 <button
                   className={`template-nav-item ${activeView.type === 'templates' && !(activeView as { type: 'templates'; category?: string }).category ? 'active' : ''}`}
-                  onClick={() => navigate({ type: 'templates' })}
+                  onClick={() => handleMobileNav(() => navigate({ type: 'templates' }))}
                 >
                   <span>🗂️</span> All templates <span className="template-nav-count">{TEMPLATE_CATEGORIES.reduce((s, c) => s + c.count, 0)}</span>
                 </button>
@@ -318,7 +328,7 @@ export function Sidebar() {
                   <button
                     key={cat.label}
                     className={`template-nav-item ${activeView.type === 'templates' && (activeView as { type: 'templates'; category?: string }).category === cat.label ? 'active' : ''}`}
-                    onClick={() => navigate({ type: 'templates', category: cat.label } as { type: 'templates'; category: string })}
+                    onClick={() => handleMobileNav(() => navigate({ type: 'templates', category: cat.label }))}
                   >
                     <span><NotionIcon icon={cat.icon} size="1.1em" /></span>
                     <span>{cat.label}</span>
@@ -482,16 +492,16 @@ export function Sidebar() {
 
           {/* Bottom */}
           <div className="sidebar-bottom">
-            <button className="sidebar-nav-item" style={{ color: 'var(--accent)', fontWeight: 500 }} onClick={quickCapture}>
+            <button className="sidebar-nav-item" style={{ color: 'var(--accent)', fontWeight: 500 }} onClick={() => handleMobileNav(quickCapture)}>
               <span className="nav-icon"><Zap size={14} /></span><span>Quick Capture</span>
             </button>
-            <button className="sidebar-nav-item" onClick={() => setImportOpen(true)}>
+            <button className="sidebar-nav-item" onClick={() => handleMobileNav(() => setImportOpen(true))}>
               <span className="nav-icon"><Upload size={14} /></span><span>Import</span>
             </button>
-            <button className="sidebar-nav-item" onClick={() => setTrashOpen(true)}>
+            <button className="sidebar-nav-item" onClick={() => handleMobileNav(() => setTrashOpen(true))}>
               <span className="nav-icon"><Trash2 size={14} /></span><span>Trash</span>
             </button>
-            <button className={`sidebar-nav-item ${activeView.type === 'settings' ? 'active' : ''}`} onClick={() => navigateToSettings()}>
+            <button className={`sidebar-nav-item ${activeView.type === 'settings' ? 'active' : ''}`} onClick={() => handleMobileNav(() => navigateToSettings())}>
               <span className="nav-icon"><Settings size={14} /></span><span>Settings</span>
             </button>
           </div>
@@ -564,7 +574,12 @@ function FlatPageRow({ page, depth, showTime, vault, onContextMenu }: {
     <div
       className={`page-tree-row ${isActive ? 'active' : ''}`}
       style={{ paddingLeft: 12 + depth * 18 }}
-      onClick={() => navigateToPage(page.id)}
+      onClick={() => {
+        navigateToPage(page.id);
+        if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+          useStore.setState({ sidebarCollapsed: true });
+        }
+      }}
       onContextMenu={(e) => { e.preventDefault(); onContextMenu(e.clientX, e.clientY); }}
       title={`Last edited ${formatDistanceToNow(page.updatedAt, { addSuffix: true })}`}
     >
@@ -600,7 +615,12 @@ function SortablePageRow(props: { page: Page; depth: number; showTime?: boolean;
       <div
         className={`page-tree-row ${(() => { const av = useStore.getState().activeView; return av.type === 'page' && (av as { type: 'page'; id: string }).id === page.id; })() ? 'active' : ''}`}
         style={{ paddingLeft: 12 }}
-        onClick={() => useStore.getState().navigateToPage(page.id)}
+        onClick={() => {
+          useStore.getState().navigateToPage(page.id);
+          if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+            useStore.setState({ sidebarCollapsed: true });
+          }
+        }}
         onContextMenu={(e) => { e.preventDefault(); props.onContextMenu(e.clientX, e.clientY); }}
         title={`Last edited ${formatDistanceToNow(page.updatedAt, { addSuffix: true })}`}
       >
@@ -706,7 +726,12 @@ function PageTreeItem({ page, depth, dragListeners, dragAttributes, onContextMen
       <div
         className={`page-tree-row ${isActive ? 'active' : ''} ${page.isExpanded ? 'expanded' : ''}`}
         style={{ paddingLeft }}
-        onClick={() => navigateToPage(page.id)}
+        onClick={() => {
+          navigateToPage(page.id);
+          if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+            useStore.setState({ sidebarCollapsed: true });
+          }
+        }}
         onContextMenu={(e) => { e.preventDefault(); onContextMenu(e.clientX, e.clientY); }}
         title={`Last edited ${formatDistanceToNow(page.updatedAt, { addSuffix: true })}`}
       >

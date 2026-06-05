@@ -1806,9 +1806,6 @@ export const useStore = create<StoreState>()(
               .catch(() => {
                 state.setIsServerOnline(false);
               });
-          } else if (state.pages.length === 0) {
-            const seed = buildSeedData();
-            state._loadSeed(seed);
           }
         }
       },

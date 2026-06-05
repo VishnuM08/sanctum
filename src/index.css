@@ -2129,9 +2129,14 @@ ul[data-type='taskList'] li[data-checked='true'] > div {
     inset: 0;
     background: rgba(0,0,0,0.4);
     z-index: 49;
-    display: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-normal), visibility var(--transition-normal);
   }
-  .sidebar-backdrop.visible { display: block; }
+  .sidebar-backdrop.visible {
+    opacity: 1;
+    visibility: visible;
+  }
 
   .main { height: 100vh; padding-bottom: 56px; }
 
