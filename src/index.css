@@ -5423,6 +5423,22 @@ mark.find-highlight-active { background: rgba(255, 159, 0, 0.6); border-radius: 
 }
 
 /* ── Onboarding Tour ─────────────────────────────────────────────────────── */
+.tour-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99998;
+  background: transparent;
+  pointer-events: auto;
+}
+
+.tour-active-target {
+  position: relative !important;
+  z-index: 99999 !important;
+  pointer-events: auto !important;
+  box-shadow: 0 0 0 2px var(--accent), var(--shadow-md) !important;
+  transition: all var(--transition-normal) !important;
+}
+
 .tour-tooltip {
   width: 320px;
   background: var(--bg-sidebar);
@@ -5434,6 +5450,18 @@ mark.find-highlight-active { background: rgba(255, 159, 0, 0.6); border-radius: 
   flex-direction: column;
   gap: 12px;
   box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .tour-tooltip {
+    width: calc(100% - 32px) !important;
+    max-width: none !important;
+    left: 16px !important;
+    right: 16px !important;
+    bottom: 16px !important;
+    top: auto !important;
+    transform: none !important;
+  }
 }
 
 .tour-close-btn {

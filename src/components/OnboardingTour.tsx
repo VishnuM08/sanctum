@@ -100,6 +100,7 @@ export function OnboardingTour() {
   }, [currentStep, activeView.type, pages]);
 
   // Recalculate target position on step changes, window resize, or sidebar state transitions
+  // Recalculate target position on step changes, window resize, or sidebar state transitions
   useEffect(() => {
     if (currentStep < 0 || currentStep >= steps.length) {
       setHighlightStyle({ display: 'none' });
@@ -108,26 +109,74 @@ export function OnboardingTour() {
 
     const step = steps[currentStep];
 
+    // Keep track of the currently styled target element and its original inline styles
+    let lastElement: HTMLElement | null = null;
+    let origPosition = '';
+    let origZIndex = '';
+    let origPointerEvents = '';
+
+    const restoreElementStyles = () => {
+      if (lastElement) {
+        lastElement.style.position = origPosition;
+        lastElement.style.zIndex = origZIndex;
+        lastElement.style.pointerEvents = origPointerEvents;
+        lastElement.classList.remove('tour-active-target');
+        lastElement = null;
+      }
+    };
+
     const updatePosition = () => {
-      const element = document.querySelector(step.selector);
+      const element = document.querySelector(step.selector) as HTMLElement | null;
+
+      // If the target element has changed, restore the old one and style the new one
+      if (element !== lastElement) {
+        restoreElementStyles();
+        if (element) {
+          lastElement = element;
+          origPosition = element.style.position;
+          origZIndex = element.style.zIndex;
+          origPointerEvents = element.style.pointerEvents;
+
+          const computedStyle = window.getComputedStyle(element);
+          if (computedStyle.position === 'static') {
+            element.style.position = 'relative';
+          }
+          element.style.zIndex = '99999';
+          element.style.pointerEvents = 'auto';
+          element.classList.add('tour-active-target');
+        }
+      }
+
       if (!element) {
-        // Fallback if target element is temporarily hidden or loading
-        if (step.placement === 'center') {
-          setHighlightStyle({
+        // Fallback if target element is temporarily hidden or loading: center the spotlight/tooltip
+        setHighlightStyle({
+          position: 'fixed',
+          left: '50%',
+          top: '50%',
+          width: '0px',
+          height: '0px',
+          boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)',
+          zIndex: 99999,
+        });
+
+        if (window.innerWidth <= 768) {
+          setTooltipStyle({
             position: 'fixed',
-            left: '50%',
-            top: '30%',
-            width: '0px',
-            height: '0px',
-            boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.45)',
-            zIndex: 99999,
+            left: '16px',
+            right: '16px',
+            bottom: '16px',
+            transform: 'none',
+            zIndex: 100000,
+            transition: 'all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
           });
+        } else {
           setTooltipStyle({
             position: 'fixed',
             left: '50%',
             top: '50%',
             transform: 'translate(-50%, -50%)',
             zIndex: 100000,
+            transition: 'all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
           });
         }
         return;
@@ -147,62 +196,82 @@ export function OnboardingTour() {
         boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5), 0 0 12px var(--accent)',
         zIndex: 99999,
         pointerEvents: 'none',
-        transition: 'all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)',
+        transition: 'all 0.15s cubic-bezier(0.2, 0.8, 0.2, 1)',
       });
 
       // Tooltip position calculation
-      const tooltipMargin = 16;
-      let left = 0;
-      let top = 0;
-      let transform = '';
+      if (window.innerWidth <= 768) {
+        // Mobile bottom sheet layout
+        setTooltipStyle({
+          position: 'fixed',
+          left: '16px',
+          right: '16px',
+          bottom: '16px',
+          transform: 'none',
+          zIndex: 100000,
+          transition: 'all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
+        });
+      } else {
+        const tooltipMargin = 16;
+        let left = 0;
+        let top = 0;
+        let transform = '';
 
-      if (step.placement === 'center') {
-        left = window.innerWidth / 2;
-        top = window.innerHeight / 2;
-        transform = 'translate(-50%, -50%)';
-      } else if (step.placement === 'right') {
-        left = rect.right + tooltipMargin;
-        top = rect.top + rect.height / 2;
-        transform = 'translateY(-50%)';
-        // Bounds checking
-        if (tooltipRef.current && left + tooltipRef.current.offsetWidth > window.innerWidth) {
-          left = rect.left - tooltipRef.current.offsetWidth - tooltipMargin;
+        if (step.placement === 'center') {
+          left = window.innerWidth / 2;
+          top = window.innerHeight / 2;
+          transform = 'translate(-50%, -50%)';
+        } else if (step.placement === 'right') {
+          left = rect.right + tooltipMargin;
+          top = rect.top + rect.height / 2;
+          transform = 'translateY(-50%)';
+          // Bounds checking
+          if (tooltipRef.current && left + tooltipRef.current.offsetWidth > window.innerWidth) {
+            left = rect.left - tooltipRef.current.offsetWidth - tooltipMargin;
+          }
+        } else if (step.placement === 'left') {
+          left = rect.left - tooltipMargin;
+          top = rect.top + rect.height / 2;
+          transform = 'translate(-100%, -50%)';
+        } else if (step.placement === 'top') {
+          left = rect.left + rect.width / 2;
+          top = rect.top - tooltipMargin;
+          transform = 'translate(-50%, -100%)';
+        } else if (step.placement === 'bottom') {
+          left = rect.left + rect.width / 2;
+          top = rect.bottom + tooltipMargin;
+          transform = 'translate(-50%, 0)';
         }
-      } else if (step.placement === 'left') {
-        left = rect.left - tooltipMargin;
-        top = rect.top + rect.height / 2;
-        transform = 'translate(-100%, -50%)';
-      } else if (step.placement === 'top') {
-        left = rect.left + rect.width / 2;
-        top = rect.top - tooltipMargin;
-        transform = 'translate(-50%, -100%)';
-      } else if (step.placement === 'bottom') {
-        left = rect.left + rect.width / 2;
-        top = rect.bottom + tooltipMargin;
-        transform = 'translate(-50%, 0)';
+
+        // Ensure tooltip remains visible inside viewport boundaries
+        if (left < tooltipMargin) left = tooltipMargin;
+        if (top < tooltipMargin) top = tooltipMargin;
+
+        setTooltipStyle({
+          position: 'fixed',
+          left: `${left}px`,
+          top: `${top}px`,
+          transform,
+          zIndex: 100000,
+          transition: 'all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
+        });
       }
-
-      // Ensure tooltip remains visible inside viewport boundaries
-      if (left < tooltipMargin) left = tooltipMargin;
-      if (top < tooltipMargin) top = tooltipMargin;
-
-      setTooltipStyle({
-        position: 'fixed',
-        left: `${left}px`,
-        top: `${top}px`,
-        transform,
-        zIndex: 100000,
-        transition: 'all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)',
-      });
     };
 
-    // Run positioning and set up observers to capture layout shifts
-    const timer = setTimeout(updatePosition, 300);
+    // Run positioning immediately and poll during transition (600ms window)
+    updatePosition();
+    const interval = setInterval(updatePosition, 30);
+    const timeout = setTimeout(() => clearInterval(interval), 600);
+
     window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true); // capture phase to listen to any scrolling sub-container
 
     return () => {
-      clearTimeout(timer);
+      clearInterval(interval);
+      clearTimeout(timeout);
       window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+      restoreElementStyles();
     };
   }, [currentStep, sidebarCollapsed]);
 
@@ -235,6 +304,9 @@ export function OnboardingTour() {
 
   return (
     <>
+      {/* Click blocker backdrop that prevents any user interaction with the application during the tour */}
+      <div className="tour-backdrop" />
+
       {/* Dynamic spotlight highlight overlay */}
       <div style={highlightStyle} />
 
