@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   User, Bell, Link, Building, Users, CreditCard,
-  Shield, Sun, Moon, Monitor, Eye, EyeOff
+  Shield, Sun, Moon, Monitor, Eye, EyeOff, ArrowLeft
 } from 'lucide-react';
 import { useStore } from '../store';
 import { api } from '../utils/api';
@@ -29,32 +29,55 @@ export function Settings({ section: initialSection }: Props) {
   const updateWorkspace = useStore((s) => s.updateWorkspace);
   const user = useStore((s) => s.user);
   const navigateToSettings = useStore((s) => s.navigateToSettings);
+  const viewHistory = useStore((s) => s.viewHistory);
+  const navigate = useStore((s) => s.navigate);
+
+  const goBack = () => {
+    if (viewHistory.length > 0) {
+      const lastView = viewHistory[viewHistory.length - 1];
+      useStore.setState((s) => ({
+        activeView: lastView,
+        viewHistory: s.viewHistory.slice(0, -1),
+      }));
+    } else {
+      navigate({ type: 'home' });
+    }
+  };
 
   const groups = ['Account', 'Workspace'];
 
   return (
-    <div className="settings-layout">
-      {/* Sidebar */}
-      <div className="settings-sidebar">
-        {groups.map((group) => (
-          <div key={group}>
-            <div className="settings-section-label">{group}</div>
-            {NAV_ITEMS.filter((i) => i.group === group).map((item) => (
-              <button
-                key={item.section}
-                className={`settings-nav-item ${section === item.section ? 'active' : ''}`}
-                onClick={() => { setSection(item.section); navigateToSettings(item.section); }}
-              >
-                {item.icon}
-                {item.label}
-              </button>
-            ))}
-          </div>
-        ))}
+    <div className="settings-layout-container">
+      {/* Mobile Settings Header */}
+      <div className="settings-mobile-header">
+        <button className="settings-back-btn" onClick={goBack} title="Back">
+          <ArrowLeft size={18} />
+        </button>
+        <span className="settings-header-title">Settings</span>
       </div>
 
-      {/* Content */}
-      <div className="settings-content">
+      <div className="settings-layout">
+        {/* Sidebar */}
+        <div className="settings-sidebar">
+          {groups.map((group) => (
+            <div key={group} style={{ display: 'contents' }}>
+              <div className="settings-section-label">{group}</div>
+              {NAV_ITEMS.filter((i) => i.group === group).map((item) => (
+                <button
+                  key={item.section}
+                  className={`settings-nav-item ${section === item.section ? 'active' : ''}`}
+                  onClick={() => { setSection(item.section); navigateToSettings(item.section); }}
+                >
+                  {item.icon}
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div className="settings-content">
         {section === 'account' && (
           <AccountSection user={user} settings={settings} updateSettings={updateSettings} />
         )}
@@ -68,6 +91,7 @@ export function Settings({ section: initialSection }: Props) {
         {section === 'security' && <SecuritySection />}
       </div>
     </div>
+  </div>
   );
 }
 
@@ -552,12 +576,7 @@ function BillingSection() {
     <>
       <h1 className="settings-h1">Plans & Billing</h1>
 
-      <div style={{
-        border: '2px solid var(--accent)',
-        borderRadius: 8,
-        padding: 24,
-        marginBottom: 24,
-      }}>
+      <div className="settings-active-plan-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 4 }}>Free Plan</div>
@@ -574,15 +593,7 @@ function BillingSection() {
         { name: 'Plus', price: '$10', desc: 'For individuals who want unlimited blocks', features: ['Unlimited blocks', '5 GB uploads', '30-day history'] },
         { name: 'Business', price: '$18', desc: 'For teams with advanced tools', features: ['Everything in Plus', 'SAML SSO', 'Advanced analytics'] },
       ].map((plan) => (
-        <div key={plan.name} style={{
-          border: '1px solid var(--border-strong)',
-          borderRadius: 8,
-          padding: 20,
-          marginBottom: 12,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
+        <div key={plan.name} className="settings-plan-card">
           <div>
             <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}>{plan.name}</div>
             <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>{plan.desc}</div>
