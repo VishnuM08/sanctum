@@ -172,7 +172,7 @@ export function PageView({ pageId }: Props) {
     return () => document.removeEventListener('keydown', handler);
   }, [page, toast]);
 
-  if (!page) {
+  if (!page || page.isDeleted) {
     return (
       <div className="main">
         <div className="home-state"><div className="home-state-icon">🔍</div><div className="home-state-title">Page not found</div></div>
