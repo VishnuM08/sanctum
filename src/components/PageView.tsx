@@ -214,30 +214,30 @@ export function PageView({ pageId }: Props) {
           </div>
 
           <div className="topbar-actions" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            {getSyncIndicator()}
+            <div className="hide-on-mobile">{getSyncIndicator()}</div>
             <button
-              className="topbar-btn"
+              className="topbar-btn hide-on-mobile"
               onClick={() => { toggleFavorite(page.id); toast(page.isFavorite ? 'Removed from favorites' : 'Added to favorites'); }}
               title="Favorite"
             >
               <Star size={15} fill={page.isFavorite ? 'currentColor' : 'none'} style={{ color: page.isFavorite ? '#f5c518' : 'currentColor' }} />
             </button>
 
-            <button className="topbar-btn" onClick={() => setFindOpen((v) => !v)} title="Find in page (⌘F)">
+            <button className="topbar-btn hide-on-mobile" onClick={() => setFindOpen((v) => !v)} title="Find in page (⌘F)">
               <Search size={14} />
             </button>
-            <button className="topbar-btn" onClick={() => setHistoryOpen((v) => !v)} title="Version history">
+            <button className="topbar-btn hide-on-mobile" onClick={() => setHistoryOpen((v) => !v)} title="Version history">
               <History size={14} />
             </button>
-            <button className="topbar-btn" onClick={() => getDailyNoteId()} title="Open today's daily note">
+            <button className="topbar-btn hide-on-mobile" onClick={() => getDailyNoteId()} title="Open today's daily note">
               <CalendarDays size={14} />
             </button>
-            <button className="topbar-btn" onClick={toggleZenMode} title="Zen mode (⌘⇧F)">
+            <button className="topbar-btn hide-on-mobile" onClick={toggleZenMode} title="Zen mode (⌘⇧F)">
               <Maximize2 size={15} />
             </button>
 
             <button className="topbar-btn primary" onClick={() => setShareOpen((v) => !v)}>
-              <Share2 size={14} /><span>Share</span>
+              <Share2 size={14} /><span className="hide-on-mobile">Share</span>
             </button>
 
             <div style={{ position: 'relative' }}>

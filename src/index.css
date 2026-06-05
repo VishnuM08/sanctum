@@ -5608,5 +5608,77 @@ mark.find-highlight-active { background: rgba(255, 159, 0, 0.6); border-radius: 
   background: var(--bg-hover-strong);
 }
 
+@media (max-width: 768px) {
+  .hide-on-mobile { display: none !important; }
 
+  /* Mobile Topbar / Header */
+  .topbar {
+    height: 52px;
+    position: sticky;
+    top: 0;
+    background: var(--bg-app);
+    z-index: 40;
+    padding: 0 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .breadcrumb-item {
+    font-size: 15px;
+    font-weight: 600;
+  }
 
+  /* Sidebar sliding drawer */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    width: 80% !important;
+    max-width: 320px;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
+  }
+  .sidebar:not(.collapsed) {
+    transform: translateX(0);
+  }
+  .sidebar.collapsed {
+    border-right: 1px solid var(--border);
+  }
+  .sidebar-backdrop.visible {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: rgba(0,0,0,0.4);
+    opacity: 1;
+    transition: opacity 0.3s ease;
+  }
+
+  /* Page container edge-to-edge */
+  .page-container, .page-container.full-width {
+    max-width: 100%;
+    margin: 0;
+    padding: 24px 16px 120px;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    min-height: auto;
+  }
+  .page-title {
+    font-size: 32px;
+  }
+  
+  /* Seamless DB cards */
+  .board-card, .table-view tr {
+    border: none !important;
+    border-bottom: 1px solid var(--border) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+  }
+  .gallery-card {
+    border: none !important;
+    border-bottom: 1px solid var(--border) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+}
