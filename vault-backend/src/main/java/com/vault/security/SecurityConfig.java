@@ -46,14 +46,17 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Allow local development and production Cloudflare subdomains
+        // Allow local development, Capacitor webviews, and production domains
         configuration.setAllowedOriginPatterns(Arrays.asList(
             "http://localhost:[*]",
             "http://127.0.0.1:[*]",
+            "http://localhost",
+            "capacitor://localhost",
+            "https://sanctum.theaignite.app",
             "https://*.theaignite.app"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Cache-Control"));
+        configuration.setAllowedHeaders(Collections.singletonList("*"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
