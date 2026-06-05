@@ -10,4 +10,6 @@ public interface ReminderRepository extends JpaRepository<Reminder, UUID> {
     List<Reminder> findByUserIdOrderByRemindAtAsc(UUID userId);
     List<Reminder> findByUserIdAndFiredFalseOrderByRemindAtAsc(UUID userId);
     List<Reminder> findByFiredFalseAndRemindAtBefore(Instant time);
+    void deleteByNoteId(UUID noteId);
+    void deleteByUserId(UUID userId);
 }

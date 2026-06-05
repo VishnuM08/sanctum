@@ -8,4 +8,5 @@ import java.util.UUID;
 public interface NoteRepository extends JpaRepository<Note, UUID> {
     List<Note> findByUserIdAndArchivedFalseOrderByUpdatedAtDesc(UUID userId);
     List<Note> findByUserIdAndArchivedTrueOrderByUpdatedAtDesc(UUID userId);
+    void deleteByUserId(UUID userId);
 }

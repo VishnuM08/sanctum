@@ -3,6 +3,10 @@ package com.vault.service;
 import com.vault.dto.AuthDto;
 import com.vault.entity.User;
 import com.vault.repository.UserRepository;
+import com.vault.repository.NoteRepository;
+import com.vault.repository.ReminderRepository;
+import com.vault.repository.VaultEntryRepository;
+import com.vault.repository.AgentLogRepository;
 import com.vault.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,6 +21,10 @@ import java.util.UUID;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final NoteRepository noteRepository;
+    private final ReminderRepository reminderRepository;
+    private final VaultEntryRepository vaultEntryRepository;
+    private final AgentLogRepository agentLogRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
@@ -85,5 +93,17 @@ public class UserService {
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getId());
         return new AuthDto.LoginResponse(token, user.getId(), user.getName(), user.getEmail());
+    }
+
+    @Transactional
+    public void deleteUser(UUID id) {
+        // Delete all dependent records first to avoid foreign key violations
+        reminderRepository.deleteByUserId(id);
+        noteRepository.deleteByUserId(id);
+        vaultEntryRepository.deleteByUserId(id);
+        agentLogRepository.deleteByUserId(id);
+
+        // Finally delete the user account
+        userRepository.deleteById(id);
     }
 }

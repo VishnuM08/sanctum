@@ -65,4 +65,14 @@ public class NoteController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @DeleteMapping
+    public ResponseEntity<?> deleteAllNotes(@AuthenticationPrincipal UserPrincipal principal) {
+        try {
+            noteService.deleteAllUserNotes(principal.id());
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }

@@ -267,6 +267,8 @@ interface StoreState {
   verifyOtp: (email: string, code: string) => Promise<void>;
   emailRegister: (name: string, email: string, password: string) => Promise<void>;
   signOut: () => void;
+  deleteAccount: () => Promise<void>;
+  deleteWorkspace: () => Promise<void>;
 
   // Database view filters/sorts
   updateDatabaseViewFilters: (databaseId: string, viewId: string, filters: import('./types').DatabaseFilterConfig[]) => void;
@@ -436,13 +438,117 @@ export const useStore = create<StoreState>()(
           const parsedDatabases: Database[] = [];
 
           if (serverNotes.length === 0) {
-            // Start with a clean workspace (no seed/dummy data)
+            // Generate a beautiful, rich "Getting Started Guide" page for first-time users
+            const defaultId = nanoid();
+            const defaultCover = { type: 'gradient', value: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', position: 50 };
+            
+            const onboardingContent = {
+              type: 'doc',
+              content: [
+                {
+                  type: 'heading',
+                  attrs: { level: 2 },
+                  content: [{ type: 'text', text: 'Welcome to Sanctum! 👋' }]
+                },
+                {
+                  type: 'paragraph',
+                  content: [{ type: 'text', text: 'Sanctum is your secure, locally-encrypted, all-in-one workspace for notes, databases, and AI-powered task organization.' }]
+                },
+                {
+                  type: 'heading',
+                  attrs: { level: 3 },
+                  content: [{ type: 'text', text: '✨ Key Features & Examples' }]
+                },
+                {
+                  type: 'heading',
+                  attrs: { level: 4 },
+                  content: [{ type: 'text', text: '1. Rich Editor & Slash Commands' }]
+                },
+                {
+                  type: 'paragraph',
+                  content: [
+                    { type: 'text', text: 'Start typing anywhere. Type ' },
+                    { type: 'text', text: '/', marks: [{ type: 'code' }] },
+                    { type: 'text', text: ' to trigger the slash commands menu to quickly insert headings, media, code blocks, and callouts.' }
+                  ]
+                },
+                {
+                  type: 'heading',
+                  attrs: { level: 4 },
+                  content: [{ type: 'text', text: '2. Zero-Knowledge Encryption' }]
+                },
+                {
+                  type: 'paragraph',
+                  content: [
+                    { type: 'text', text: 'Go to the ' },
+                    { type: 'text', text: 'Vault', marks: [{ type: 'bold' }] },
+                    { type: 'text', text: ' tab in the sidebar to configure your master key. Your secrets are encrypted locally on your device using AES-GCM before being stored on the backend.' }
+                  ]
+                },
+                {
+                  type: 'heading',
+                  attrs: { level: 4 },
+                  content: [{ type: 'text', text: '3. Local AI Agent & Auditing' }]
+                },
+                {
+                  type: 'paragraph',
+                  content: [
+                    { type: 'text', text: 'Ask the AI Agent chat in the sidebar to summarize your notes or check your active logs. The agent runs privately on your own server using Ollama RAG — keeping your text fully secure.' }
+                  ]
+                },
+                {
+                  type: 'heading',
+                  attrs: { level: 4 },
+                  content: [{ type: 'text', text: '4. Dynamic Databases' }]
+                },
+                {
+                  type: 'paragraph',
+                  content: [
+                    { type: 'text', text: 'You can insert a database table, board, gallery, or list view into any page. Click "Add a page" in the sidebar to start writing!' }
+                  ]
+                }
+              ]
+            };
+
+            const defaultPageObj: Page = {
+              id: defaultId,
+              title: 'Getting Started Guide',
+              icon: 'notion_happy',
+              cover: defaultCover,
+              content: onboardingContent,
+              parentId: null,
+              children: [],
+              isExpanded: false,
+              isFavorite: true,
+              isDeleted: false,
+              isPublished: false,
+              isLocked: false,
+              isPrivate: false,
+              font: 'default',
+              isFullWidth: false,
+              isSmallText: false,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              tags: ['onboarding', 'guide'],
+              aiSummary: 'An introductory guide detailing how to use Sanctum, rich editor slash commands, zero-knowledge encryption, and AI agent features.',
+            };
+
             set({
-              pages: [],
+              pages: [defaultPageObj],
               databases: [],
-              topLevelPageIds: [],
-              activeView: { type: 'home' },
+              topLevelPageIds: [defaultId],
+              favoriteOrder: [defaultId],
+              activeView: { type: 'page', id: defaultId },
             });
+
+            // Persist this page to the backend database instantly so it registers
+            const contentStr = serializePageContent(defaultPageObj);
+            api.createNote(defaultPageObj.title, contentStr)
+              .then((created) => {
+                get()._replacePageId(defaultId, created.id);
+              })
+              .catch((err) => console.error('Failed to save default onboarding page to server', err));
+
             return;
           }
 
@@ -1496,6 +1602,28 @@ export const useStore = create<StoreState>()(
           },
           activeView: { type: 'home' }
         });
+      },
+
+      deleteAccount: async () => {
+        if (api.getToken()) {
+          await api.deleteAccount();
+        }
+        get().signOut();
+      },
+
+      deleteWorkspace: async () => {
+        if (api.getToken()) {
+          await api.deleteAllNotes();
+        }
+        set({
+          pages: [],
+          databases: [],
+          topLevelPageIds: [],
+          favoriteOrder: [],
+          visitHistory: [],
+          inboxItems: [],
+        });
+        get().navigate({ type: 'home' });
       },
 
       // ── Selectors ────────────────────────────────────────────────────────

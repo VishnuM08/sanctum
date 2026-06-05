@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import {
   User, Bell, Link, Building, Users, CreditCard,
-  Shield, Sun, Moon, Monitor
+  Shield, Sun, Moon, Monitor, Eye, EyeOff
 } from 'lucide-react';
 import { useStore } from '../store';
+import { api } from '../utils/api';
 import type { SettingsSection } from '../types';
 
 interface Props {
@@ -221,7 +222,20 @@ function AccountSection({ user, settings, updateSettings }: {
           <div style={{ fontWeight: 500, fontSize: 14 }}>Delete account</div>
           <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Permanently delete your account and all data</div>
         </div>
-        <button className="settings-btn danger">Delete account</button>
+        <button
+          className="settings-btn danger"
+          onClick={async () => {
+            if (confirm('Permanently delete your account and all data? This cannot be undone.')) {
+              try {
+                await useStore.getState().deleteAccount();
+              } catch (err: any) {
+                alert(err.message || 'Failed to delete account');
+              }
+            }
+          }}
+        >
+          Delete account
+        </button>
       </div>
     </>
   );
@@ -281,6 +295,32 @@ function ConnectionsSection() {
     { name: 'Figma', icon: '🎨', connected: false, desc: 'Embed Figma designs' },
   ];
 
+  const [serverUrl, setServerUrl] = useState(api.getApiBase());
+  const [showUrl, setShowUrl] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const isServerOnline = useStore((s) => s.isServerOnline);
+  const setIsServerOnline = useStore((s) => s.setIsServerOnline);
+  const syncWithBackend = useStore((s) => s.syncWithBackend);
+
+  const handleUpdateServer = async () => {
+    setChecking(true);
+    try {
+      api.setApiBase(serverUrl.trim());
+      const online = await api.checkServer();
+      setIsServerOnline(online);
+      if (online) {
+        await syncWithBackend();
+        alert('Server URL updated successfully and connected!');
+      } else {
+        alert('Server URL saved, but the server is unreachable.');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to connect to server');
+    } finally {
+      setChecking(false);
+    }
+  };
+
   return (
     <>
       <h1 className="settings-h1">Connections</h1>
@@ -295,7 +335,54 @@ function ConnectionsSection() {
             AI writing, summaries, and action item extraction run privately on your own server via Ollama — no third-party API keys required.
           </div>
         </div>
-        <span style={{ fontSize: 12, fontWeight: 600, color: '#4caf50', background: 'rgba(76,175,80,0.12)', padding: '3px 10px', borderRadius: 20, whiteSpace: 'nowrap' }}>✓ Active</span>
+        <span style={{ fontSize: 12, fontWeight: 600, color: isServerOnline ? '#4caf50' : '#f44336', background: isServerOnline ? 'rgba(76,175,80,0.12)' : 'rgba(244,67,54,0.12)', padding: '3px 10px', borderRadius: 20, whiteSpace: 'nowrap' }}>
+          {isServerOnline ? '✓ Active' : '✗ Offline'}
+        </span>
+      </div>
+
+      {/* Server Base URL Settings */}
+      <h2 className="settings-h2">Backend Server URL</h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '16px', borderRadius: 8, background: 'var(--bg-hover)', marginBottom: 32, border: '1px solid var(--border)' }}>
+        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+          Configure the API endpoint of your cloud server. This is masked by default for privacy.
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
+          <input
+            type={showUrl ? 'text' : 'password'}
+            className="settings-input"
+            value={serverUrl}
+            onChange={(e) => setServerUrl(e.target.value)}
+            placeholder="https://sanctum-api.theaignite.app"
+            style={{ flex: 1, paddingRight: '40px' }}
+          />
+          <button
+            type="button"
+            onClick={() => setShowUrl(!showUrl)}
+            style={{
+              position: 'absolute',
+              right: '90px',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--text-muted)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 4
+            }}
+            title={showUrl ? 'Hide server URL' : 'Show server URL'}
+          >
+            {showUrl ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+          <button
+            className="settings-btn primary"
+            onClick={handleUpdateServer}
+            disabled={checking}
+            style={{ whiteSpace: 'nowrap' }}
+          >
+            {checking ? 'Saving...' : 'Update'}
+          </button>
+        </div>
       </div>
 
       <h2 className="settings-h2">Other Integrations</h2>
@@ -380,7 +467,21 @@ function WorkspaceSection({ workspace, updateWorkspace }: {
           <div style={{ fontWeight: 500, fontSize: 14 }}>Delete workspace</div>
           <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Permanently delete the workspace and all pages</div>
         </div>
-        <button className="settings-btn danger">Delete workspace</button>
+        <button
+          className="settings-btn danger"
+          onClick={async () => {
+            if (confirm('Permanently delete the entire workspace and all pages? This cannot be undone.')) {
+              try {
+                await useStore.getState().deleteWorkspace();
+                alert('Workspace cleared successfully!');
+              } catch (err: any) {
+                alert(err.message || 'Failed to delete workspace');
+              }
+            }
+          }}
+        >
+          Delete workspace
+        </button>
       </div>
     </>
   );

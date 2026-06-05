@@ -4,6 +4,7 @@ import com.vault.dto.NoteDto;
 import com.vault.entity.User;
 import com.vault.entity.Note;
 import com.vault.repository.NoteRepository;
+import com.vault.repository.ReminderRepository;
 import com.vault.service.agent.AgentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Lazy;
@@ -18,6 +19,7 @@ import java.util.UUID;
 public class NoteService {
 
     private final NoteRepository noteRepository;
+    private final ReminderRepository reminderRepository;
     
     // Use Lazy initialization to avoid circular dependency since AgentService might inject NoteService
     @Lazy
@@ -76,7 +78,16 @@ public class NoteService {
             throw new RuntimeException("Unauthorized");
         }
 
+        // Delete associated reminders first to satisfy foreign key constraints
+        reminderRepository.deleteByNoteId(id);
+
         noteRepository.delete(note);
+    }
+
+    @Transactional
+    public void deleteAllUserNotes(UUID userId) {
+        reminderRepository.deleteByUserId(userId);
+        noteRepository.deleteByUserId(userId);
     }
 
     public Note findById(UUID id) {

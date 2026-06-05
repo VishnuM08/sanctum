@@ -218,6 +218,16 @@ export const api = {
     localStorage.removeItem('vault-user');
   },
 
+  async deleteAccount(): Promise<void> {
+    const res = await authenticatedFetch(`${API_BASE}/auth/account`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const msg = await res.text();
+      throw new Error(msg || 'Failed to delete account');
+    }
+  },
+
   // Notes API
   async getNotes(): Promise<Note[]> {
     const res = await authenticatedFetch(`${API_BASE}/notes`);
@@ -248,6 +258,13 @@ export const api = {
       method: 'DELETE',
     });
     if (!res.ok) throw new Error('Failed to delete note');
+  },
+
+  async deleteAllNotes(): Promise<void> {
+    const res = await authenticatedFetch(`${API_BASE}/notes`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('Failed to delete all notes');
   },
 
   // Vault API

@@ -7,4 +7,5 @@ import java.util.UUID;
 
 public interface VaultEntryRepository extends JpaRepository<VaultEntry, UUID> {
     List<VaultEntry> findByUserIdOrderByCreatedAtDesc(UUID userId);
+    void deleteByUserId(UUID userId);
 }

@@ -7,4 +7,5 @@ import java.util.UUID;
 
 public interface AgentLogRepository extends JpaRepository<AgentLog, UUID> {
     List<AgentLog> findByUserIdOrderByCreatedAtDesc(UUID userId);
+    void deleteByUserId(UUID userId);
 }
