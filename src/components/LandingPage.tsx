@@ -193,25 +193,6 @@ export function LandingPage() {
       await signInRef.current({ name, email, avatar }, idToken);
     } catch (err: any) {
       console.error('Google Sign-In failed:', err);
-      // Fallback to simulated sign-in
-      try {
-        await signInRef.current({ name: 'Vishnu', email: 'vishnu.magesh@gmail.com', avatar: '🧑‍💻' });
-      } catch (fallbackErr) {
-        console.error('Mock Google Sign-In also failed:', fallbackErr);
-      }
-    } finally {
-      setSigningIn(false);
-    }
-  };
-
-  const doGoogleSignIn = async () => {
-    setSigningIn(true);
-    // Simulated sign-in — no real OAuth. Drops you straight into the app.
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 850));
-      await signInRef.current({ name: 'Vishnu', email: 'vishnu.magesh@gmail.com', avatar: '🧑‍💻' });
-    } catch (err: any) {
-      console.error('Mock login failed:', err);
     } finally {
       setSigningIn(false);
     }

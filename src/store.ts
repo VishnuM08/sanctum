@@ -168,255 +168,7 @@ function deserializePageContent(
   return { page: defaultPage(doc) };
 }
 
-// ── Seed helpers ──────────────────────────────────────────────────────────────
 
-function makePage(overrides: Partial<Page> & { id?: string }): Page {
-  return {
-    id: overrides.id ?? nanoid(),
-    title: '',
-    icon: '📄',
-    content: null,
-    parentId: null,
-    children: [],
-    isExpanded: false,
-    isFavorite: false,
-    isDeleted: false,
-    isPublished: false,
-    isLocked: false,
-    isPrivate: false,
-    font: 'default',
-    isFullWidth: false,
-    isSmallText: false,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-    ...overrides,
-  };
-}
-
-function makeDatabase(overrides: Partial<Database> & Pick<Database, 'title' | 'properties' | 'rows'>): Database {
-  const tableViewId = nanoid();
-  return {
-    id: overrides.id ?? nanoid(),
-    icon: '🗄️',
-    views: [
-      { id: tableViewId, name: 'Table', type: 'table', sorts: [], filters: [], hiddenPropertyIds: [] },
-      { id: nanoid(), name: 'Board', type: 'board', groupByPropertyId: undefined, sorts: [], filters: [], hiddenPropertyIds: [] },
-      { id: nanoid(), name: 'Gallery', type: 'gallery', sorts: [], filters: [], hiddenPropertyIds: [] },
-      { id: nanoid(), name: 'List', type: 'list', sorts: [], filters: [], hiddenPropertyIds: [] },
-    ],
-    activeViewId: tableViewId,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-    ...overrides,
-  };
-}
-
-function row(values: Record<string, DatabaseCellValue>, order: number): Database['rows'][0] {
-  return { id: nanoid(), values, order };
-}
-
-function buildSeedData() {
-  const gettingStartedId = nanoid();
-  const quickStartId = nanoid();
-  const shortcutsId = nanoid();
-  const projectsId = nanoid();
-  const websiteId = nanoid();
-  const marketingId = nanoid();
-  const personalId = nanoid();
-  const readingId = nanoid();
-  const goalsId = nanoid();
-
-  const taskDbId = nanoid();
-  const bookDbId = nanoid();
-
-  const taskStatusPropId = nanoid();
-  const taskPriorityPropId = nanoid();
-  const taskDuePropId = nanoid();
-  const taskAssigneePropId = nanoid();
-  const taskTagsPropId = nanoid();
-  const taskProgressPropId = nanoid();
-
-  const bookAuthorPropId = nanoid();
-  const bookGenrePropId = nanoid();
-  const bookRatingPropId = nanoid();
-  const bookReadPropId = nanoid();
-  const bookNotesPropId = nanoid();
-
-  const gettingStartedContent = {
-    type: 'doc',
-    content: [
-      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Welcome to Notebook 2.0 👋' }] },
-      { type: 'paragraph', content: [{ type: 'text', text: 'Your all-in-one workspace for notes, tasks, and databases. Explore the sidebar or create a new page to get started.' }] },
-      { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Key features' }] },
-      {
-        type: 'bulletList', content: [
-          { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Rich text editor with slash commands (type /)' }] }] },
-          { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Nested pages and page hierarchy' }] }] },
-          { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Databases: Table, Board, Gallery, List views' }] }] },
-          { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Dark mode with system preference detection' }] }] },
-          { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Quick search with Cmd+K' }] }] },
-        ],
-      },
-    ],
-  };
-
-  const pages: Page[] = [
-    makePage({
-      id: gettingStartedId,
-      title: 'Getting Started',
-      icon: '👋',
-      cover: { type: 'url', value: coverMountains, position: 50 },
-      content: gettingStartedContent,
-      isFavorite: true,
-      isExpanded: true,
-      children: [quickStartId, shortcutsId],
-    }),
-    makePage({
-      id: quickStartId,
-      title: 'Quick Start Guide',
-      icon: '🚀',
-      cover: { type: 'gradient', value: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', position: 50 },
-      parentId: gettingStartedId,
-      content: {
-        type: 'doc',
-        content: [
-          { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Quick Start Guide' }] },
-          { type: 'paragraph', content: [{ type: 'text', text: 'Start writing anywhere on the page. Use the slash (/) command to insert blocks.' }] },
-        ],
-      },
-    }),
-    makePage({
-      id: shortcutsId,
-      title: 'Keyboard Shortcuts',
-      icon: '⌨️',
-      cover: { type: 'gradient', value: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)', position: 50 },
-      parentId: gettingStartedId,
-      content: {
-        type: 'doc',
-        content: [
-          { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Keyboard Shortcuts' }] },
-        ],
-      },
-    }),
-    makePage({
-      id: projectsId,
-      title: 'My Projects',
-      icon: '📁',
-      cover: { type: 'gradient', value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', position: 50 },
-      isExpanded: true,
-      children: [websiteId, marketingId],
-    }),
-    makePage({
-      id: websiteId,
-      title: 'Website Redesign',
-      icon: '🌐',
-      cover: { type: 'gradient', value: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', position: 50 },
-      parentId: projectsId,
-      databaseId: taskDbId,
-    }),
-    makePage({
-      id: marketingId,
-      title: 'Marketing Campaign',
-      icon: '📣',
-      cover: { type: 'gradient', value: 'linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)', position: 50 },
-      parentId: projectsId,
-      content: {
-        type: 'doc',
-        content: [
-          { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Q1 Marketing Campaign' }] },
-        ],
-      },
-    }),
-    makePage({
-      id: personalId,
-      title: 'Personal',
-      icon: '🏠',
-      cover: { type: 'gradient', value: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', position: 50 },
-      isExpanded: true,
-      children: [readingId, goalsId],
-    }),
-    makePage({
-      id: readingId,
-      title: 'Reading List',
-      icon: '📚',
-      cover: { type: 'gradient', value: 'linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%)', position: 50 },
-      parentId: personalId,
-      databaseId: bookDbId,
-    }),
-    makePage({
-      id: goalsId,
-      title: 'Goals 2025',
-      icon: '🎯',
-      cover: { type: 'gradient', value: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)', position: 50 },
-      parentId: personalId,
-      isFavorite: true,
-      content: {
-        type: 'doc',
-        content: [
-          { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: '2025 Goals' }] },
-        ],
-      },
-    }),
-  ];
-
-  const taskBoardViewId = nanoid();
-  const taskDb = makeDatabase({
-    id: taskDbId,
-    title: 'Project Tasks',
-    icon: '✅',
-    views: [
-      { id: nanoid(), name: 'All Tasks', type: 'table', sorts: [], filters: [], hiddenPropertyIds: [] },
-      { id: taskBoardViewId, name: 'By Status', type: 'board', groupByPropertyId: taskStatusPropId, sorts: [], filters: [], hiddenPropertyIds: [] },
-    ],
-    properties: [
-      { id: 'title', name: 'Name', type: 'title', width: 260, hidden: false },
-      {
-        id: taskStatusPropId, name: 'Status', type: 'select', width: 130, hidden: false,
-        options: [
-          { id: nanoid(), name: 'Not Started', color: 'gray' },
-          { id: nanoid(), name: 'In Progress', color: 'blue' },
-          { id: nanoid(), name: 'Done', color: 'green' },
-        ],
-      },
-      { id: taskDuePropId, name: 'Due Date', type: 'date', width: 130, hidden: false },
-    ],
-    rows: [
-      row({ title: 'Redesign homepage', [taskStatusPropId]: 'In Progress', [taskDuePropId]: '2026-06-15' }, 0),
-      row({ title: 'Fix login bug', [taskStatusPropId]: 'Done', [taskDuePropId]: '2026-06-03' }, 1),
-    ],
-  });
-
-  const bookGalleryViewId = nanoid();
-  const bookDb = makeDatabase({
-    id: bookDbId,
-    title: 'Book Collection',
-    icon: '📚',
-    views: [
-      { id: nanoid(), name: 'Table', type: 'table', sorts: [], filters: [], hiddenPropertyIds: [] },
-      { id: bookGalleryViewId, name: 'Gallery', type: 'gallery', sorts: [], filters: [], hiddenPropertyIds: [] },
-    ],
-    properties: [
-      { id: 'title', name: 'Title', type: 'title', width: 240, hidden: false },
-      { id: bookAuthorPropId, name: 'Author', type: 'text', width: 180, hidden: false },
-      {
-        id: bookGenrePropId, name: 'Genre', type: 'select', width: 120, hidden: false,
-        options: [
-          { id: nanoid(), name: 'Technical', color: 'blue' },
-          { id: nanoid(), name: 'Non-fiction', color: 'green' },
-        ],
-      },
-    ],
-    rows: [
-      row({ title: 'The Pragmatic Programmer', [bookAuthorPropId]: 'David Thomas, Andrew Hunt', [bookGenrePropId]: 'Technical' }, 0),
-    ],
-  });
-
-  return {
-    pages,
-    databases: [taskDb, bookDb],
-    topLevelPageIds: [gettingStartedId, projectsId, personalId],
-  };
-}
 
 // ── Store Interface ──────────────────────────────────────────────────────────
 
@@ -520,7 +272,6 @@ interface StoreState {
   updateDatabaseViewFilters: (databaseId: string, viewId: string, filters: import('./types').DatabaseFilterConfig[]) => void;
   updateDatabaseViewSorts: (databaseId: string, viewId: string, sorts: import('./types').DatabaseSortConfig[]) => void;
 
-  _loadSeed: (data: ReturnType<typeof buildSeedData>) => void;
   _syncPageToBackend: (id: string) => void;
 
   // Selectors
@@ -1349,17 +1100,6 @@ export const useStore = create<StoreState>()(
         }
       },
 
-      // ── Internal seed loader ─────────────────────────────────────────────
-
-      _loadSeed: (data) => {
-        set({
-          pages: data.pages,
-          databases: data.databases,
-          topLevelPageIds: data.topLevelPageIds,
-          activeView: { type: 'page', id: data.topLevelPageIds[0] },
-        });
-      },
-
       // ── Settings ─────────────────────────────────────────────────────────
 
       updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
@@ -1694,8 +1434,8 @@ export const useStore = create<StoreState>()(
       // ── Auth actions ──────────────────────────────────────────────────────
 
       signIn: async (profile, idToken) => {
-        const tokenToUse = idToken || "mock_google_id_token_vishnu";
-        const data = await api.googleLogin(tokenToUse);
+        if (!idToken) throw new Error('No identity token provided');
+        const data = await api.googleLogin(idToken);
         api.setToken(data.token);
 
         set((s) => ({
