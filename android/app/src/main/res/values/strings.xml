@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Sanctum</string>
-    <string name="title_activity_main">Sanctum</string>
+    <string name="app_name">Notebook</string>
+    <string name="title_activity_main">Notebook</string>
     <string name="package_name">com.sanctum.app</string>
     <string name="custom_url_scheme">com.sanctum.app</string>
 </resources>

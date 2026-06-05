@@ -36,8 +36,8 @@ public class OtpService {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(email);
-            message.setSubject("Your Sanctum Verification Code");
-            message.setText("Hello,\n\nYour 6-digit OTP verification code is: " + code + "\n\nThis code will expire in 5 minutes. If you did not request this, please ignore this email.\n\nBest regards,\nSanctum Personal Vault Team");
+            message.setSubject("Your Notebook Verification Code");
+            message.setText("Hello,\n\nYour 6-digit OTP verification code is: " + code + "\n\nThis code will expire in 5 minutes. If you did not request this, please ignore this email.\n\nBest regards,\nNotebook Personal Vault Team");
             mailSender.send(message);
             log.info("Successfully sent OTP email to: {}", email);
         } catch (Exception e) {

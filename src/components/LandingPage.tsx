@@ -300,7 +300,7 @@ export function LandingPage() {
         <div className="landing-nav-inner">
           <div className="landing-brand">
             <BrandLogo size={28} />
-            <span>Sanctum</span>
+            <span>Notebook</span>
           </div>
           <nav className="landing-nav-links">
             <a href="#features">Features</a>
@@ -575,8 +575,8 @@ export function LandingPage() {
       </section>
 
       <footer className="landing-footer">
-        <div className="landing-brand"><BrandLogo size={22} /><span>Sanctum</span></div>
-        <span className="landing-footer-note">Sanctum · Secure AI-Powered Organizer</span>
+        <div className="landing-brand"><BrandLogo size={22} /><span>Notebook</span></div>
+        <span className="landing-footer-note">Notebook · Secure AI-Powered Organizer</span>
       </footer>
 
       {showServerModal && (

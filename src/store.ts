@@ -448,11 +448,11 @@ export const useStore = create<StoreState>()(
                 {
                   type: 'heading',
                   attrs: { level: 2 },
-                  content: [{ type: 'text', text: 'Welcome to Sanctum! 👋' }]
+                  content: [{ type: 'text', text: 'Welcome to Notebook! 👋' }]
                 },
                 {
                   type: 'paragraph',
-                  content: [{ type: 'text', text: 'Sanctum is your secure, locally-encrypted, all-in-one workspace for notes, databases, and AI-powered task organization.' }]
+                  content: [{ type: 'text', text: 'Notebook is your secure, locally-encrypted, all-in-one workspace for notes, databases, and AI-powered task organization.' }]
                 },
                 {
                   type: 'heading',
@@ -530,7 +530,7 @@ export const useStore = create<StoreState>()(
               createdAt: Date.now(),
               updatedAt: Date.now(),
               tags: ['onboarding', 'guide'],
-              aiSummary: 'An introductory guide detailing how to use Sanctum, rich editor slash commands, zero-knowledge encryption, and AI agent features.',
+              aiSummary: 'An introductory guide detailing how to use Notebook, rich editor slash commands, zero-knowledge encryption, and AI agent features.',
             };
 
             set({
