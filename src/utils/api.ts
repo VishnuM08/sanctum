@@ -93,8 +93,8 @@ export const api = {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s timeout for connection testing
 
-        // Ping the auth/me endpoint (will return 401 if online, or network error if offline)
-        const response = await fetch(`${API_BASE}/auth/me`, {
+        // Ping the public auth/status endpoint (will return 200 if online, or network error if offline)
+        const response = await fetch(`${API_BASE}/auth/status`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

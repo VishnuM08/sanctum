@@ -22,6 +22,11 @@ public class AuthController {
     @Value("${security.allow-mock-login:false}")
     private boolean allowMockLogin;
 
+    @GetMapping("/status")
+    public ResponseEntity<String> getStatus() {
+        return ResponseEntity.ok("OK");
+    }
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody AuthDto.RegisterRequest request) {
         try {
