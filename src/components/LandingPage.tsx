@@ -309,6 +309,23 @@ export function LandingPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (authMethod === 'google' && googleReady) {
+      const google = (window as any).google;
+      const heroBtnEl = document.getElementById('googleBtnHero');
+      if (heroBtnEl && google?.accounts?.id) {
+        heroBtnEl.innerHTML = '';
+        google.accounts.id.renderButton(heroBtnEl, {
+          theme: 'filled_blue',
+          size: 'large',
+          shape: 'pill',
+          text: 'continue_with',
+          width: 250,
+        });
+      }
+    }
+  }, [authMethod, googleReady]);
+
   return (
     <div className="landing">
       {/* Animated gradient backdrop */}
