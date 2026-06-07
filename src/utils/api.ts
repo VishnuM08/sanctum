@@ -383,11 +383,17 @@ export const api = {
       body: JSON.stringify({ message }),
     });
 
-    if (res.status === 401 || res.status === 403) {
-      if (onUnauthorizedCallback) {
-        onUnauthorizedCallback();
+    if (res.status === 404 || res.status === 403) {
+      // The streaming endpoint might not exist on the server yet, or the token might be expired.
+      // Fallback to the synchronous chat endpoint. If the token is truly expired,
+      // authenticatedFetch inside chatWithAgent will properly log the user out.
+      try {
+        const fallbackReply = await this.chatWithAgent(message);
+        onChunk(fallbackReply);
+        return;
+      } catch (err) {
+        throw new Error('Failed to stream query agent via fallback');
       }
-      throw new Error('UNAUTHORIZED');
     }
 
     if (!res.ok) {
