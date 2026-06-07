@@ -359,42 +359,7 @@ export function AIAgentChat() {
             )}
           </div>
 
-          {/* Activity Logs Card */}
-          <div className="agent-side-card">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border)', paddingBottom: 10 }}>
-              <TrendingUp size={16} style={{ color: 'var(--accent)' }} />
-              <div style={{ fontWeight: 600, fontSize: 14 }}>Agent Logs & Audit Trail</div>
-            </div>
 
-            {agentLogs.length === 0 ? (
-              <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--text-faint)', fontSize: 13 }}>
-                No background logs recorded yet.
-              </div>
-            ) : (
-              <div className="agent-logs-list">
-                {agentLogs.map((log) => (
-                  <div key={log.id} className="agent-log-item">
-                    <div className="agent-log-icon">
-                      <Sparkles size={14} />
-                    </div>
-                    <div className="agent-log-body">
-                      <div className="agent-log-action">{log.action}</div>
-                      <div className="agent-log-desc">{log.payload || log.description}</div>
-                      {log.noteTitle && (
-                        <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>
-                          Ref: {log.noteTitle}
-                        </div>
-                      )}
-                      <div className="agent-log-meta">
-                        <Clock size={9} style={{ marginRight: 4, display: 'inline-block', verticalAlign: 'middle' }} />
-                        <span>{formatLogTime(log.timestamp || log.createdAt || '')}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>
