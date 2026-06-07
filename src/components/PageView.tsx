@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-  MoreHorizontal, Share2, Star, Maximize2, ChevronRight,
+  MoreHorizontal, Share2, Star, Maximize2, ChevronRight, ChevronLeft,
   Trash2, Copy, Lock, Unlock, Globe, Type, AlignLeft,
   Link, Download, ExternalLink, History, Search, FileCode,
   CalendarDays, BookMarked, Menu, Cloud, CloudOff
 } from 'lucide-react';
+import { useIsMobile } from '../utils/useIsMobile';
 import { useStore } from '../store';
 import { Editor } from './Editor';
 import { EmojiPicker } from './EmojiPicker';
@@ -29,7 +30,9 @@ export function PageView({ pageId }: Props) {
   const toggleFavorite = useStore((s) => s.toggleFavorite);
   const getPagePath   = useStore((s) => s.getPagePath);
   const navigateToPage = useStore((s) => s.navigateToPage);
+  const navigate      = useStore((s) => s.navigate);
   const createPage    = useStore((s) => s.createPage);
+  const isMobile      = useIsMobile();
   const zenMode       = useStore((s) => s.zenMode);
   const toggleZenMode = useStore((s) => s.toggleZenMode);
   const toggleSidebar = useStore((s) => s.toggleSidebar);
@@ -181,6 +184,12 @@ export function PageView({ pageId }: Props) {
   }
 
   const breadcrumb = getPagePath(page.id);
+  const parentPage = breadcrumb.length > 1 ? breadcrumb[breadcrumb.length - 2] : null;
+
+  const handleMobileBack = () => {
+    if (parentPage) navigateToPage(parentPage.id);
+    else navigate({ type: 'home' });
+  };
 
   const containerClass = [
     'page-container',
@@ -191,9 +200,68 @@ export function PageView({ pageId }: Props) {
 
   return (
     <div className="main" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      {/* Topbar (hidden in zen mode) */}
-      {!zenMode && (
-        <div className="topbar">
+      {/* Mobile topbar — Notion/Docs style */}
+      {!zenMode && isMobile && (
+        <div className="topbar mobile-topbar">
+          <button type="button" className="mobile-header-btn" onClick={handleMobileBack} aria-label="Go back">
+            <ChevronLeft size={22} />
+          </button>
+          <div className="mobile-topbar-title">
+            <NotionIcon icon={page.icon || 'notion_page'} size="1.1em" />
+            <span className="mobile-topbar-title-text">{page.title || 'Untitled'}</span>
+          </div>
+          <div className="mobile-topbar-actions">
+            <button
+              type="button"
+              className="mobile-header-btn"
+              onClick={() => { toggleFavorite(page.id); toast(page.isFavorite ? 'Removed from favorites' : 'Added to favorites'); }}
+              aria-label="Favorite"
+            >
+              <Star size={18} fill={page.isFavorite ? 'currentColor' : 'none'} style={{ color: page.isFavorite ? '#f5c518' : 'currentColor' }} />
+            </button>
+            <button type="button" className="mobile-header-btn" onClick={() => setShareOpen(true)} aria-label="Share">
+              <Share2 size={18} />
+            </button>
+            <div style={{ position: 'relative' }}>
+              <button type="button" className="mobile-header-btn" onClick={() => setOptionsOpen((v) => !v)} aria-label="More options">
+                <MoreHorizontal size={20} />
+              </button>
+              {optionsOpen && (
+                <PageOptionsMenu
+                  page={page}
+                  onClose={() => setOptionsOpen(false)}
+                  onDelete={() => { deletePage(page.id); setOptionsOpen(false); toast('Moved to trash'); }}
+                  onFavorite={() => { toggleFavorite(page.id); setOptionsOpen(false); }}
+                  onDuplicate={() => {
+                    const id = createPage(page.parentId);
+                    updatePage(id, { title: `${page.title} (copy)`, icon: page.icon, content: page.content, font: page.font });
+                    toast('Page duplicated'); setOptionsOpen(false);
+                  }}
+                  onExportMd={() => { downloadMarkdown(page.title, page.icon, page.content); toast('Exported as Markdown'); setOptionsOpen(false); }}
+                  onExportHtml={() => {
+                    const pm = document.querySelector('.ProseMirror');
+                    exportToHtml(page.title, page.icon, pm?.innerHTML ?? '');
+                    toast('Exported as HTML'); setOptionsOpen(false);
+                  }}
+                  onSaveTemplate={() => {
+                    const existing = JSON.parse(localStorage.getItem('user-templates') ?? '[]');
+                    existing.unshift({ id: page.id, name: page.title || 'Untitled', icon: page.icon, content: page.content, savedAt: Date.now() });
+                    localStorage.setItem('user-templates', JSON.stringify(existing.slice(0, 20)));
+                    toast('Saved as template'); setOptionsOpen(false);
+                  }}
+                  onCopyLink={() => { navigator.clipboard.writeText(window.location.href); toast('Link copied'); setOptionsOpen(false); }}
+                  onUpdatePage={updatePage}
+                  mobile
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Desktop topbar */}
+      {!zenMode && !isMobile && (
+        <div className="topbar desktop-only">
           <button className="topbar-menu-btn" onClick={toggleSidebar} title="Toggle sidebar">
             <Menu size={16} />
           </button>
@@ -480,16 +548,15 @@ function AutosizeTextarea({ value, placeholder, onChange, onKeyDown, className, 
 
 // ── Options menu ─────────────────────────────────────────────────────────────
 
-function PageOptionsMenu({ page, onClose, onDelete, onFavorite, onDuplicate, onExportMd, onCopyLink, onUpdatePage, onSaveTemplate, onExportHtml }: {
+function PageOptionsMenu({ page, onClose, onDelete, onFavorite, onDuplicate, onExportMd, onCopyLink, onUpdatePage, onSaveTemplate, onExportHtml, mobile }: {
   page: Page; onClose: () => void; onDelete: () => void; onFavorite: () => void;
   onDuplicate: () => void; onExportMd: () => void; onCopyLink: () => void;
   onSaveTemplate: () => void; onExportHtml: () => void;
   onUpdatePage: (id: string, patch: Partial<Page>) => void;
+  mobile?: boolean;
 }) {
-  return (
+  const menuItems = (
     <>
-      <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={onClose} />
-      <div className="dropdown-menu" style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 50 }} onClick={(e) => e.stopPropagation()}>
         <button className="dropdown-item" onClick={onFavorite}>
           <Star size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
           {page.isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
@@ -536,6 +603,26 @@ function PageOptionsMenu({ page, onClose, onDelete, onFavorite, onDuplicate, onE
         <button className="dropdown-item danger" onClick={onDelete}>
           <Trash2 size={14} style={{ color: 'var(--danger)', flexShrink: 0 }} /> Move to Trash
         </button>
+    </>
+  );
+
+  if (mobile) {
+    return (
+      <>
+        <div className="mobile-sheet-backdrop" onClick={onClose} />
+        <div className="mobile-action-sheet" onClick={(e) => e.stopPropagation()}>
+          <div className="mobile-action-sheet-handle" />
+          {menuItems}
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={onClose} />
+      <div className="dropdown-menu" style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 50 }} onClick={(e) => e.stopPropagation()}>
+        {menuItems}
       </div>
     </>
   );

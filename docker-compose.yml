@@ -43,6 +43,15 @@ services:
       - ollama_data:/root/.ollama
     # If the user has GPU, they can configure it. By default, it runs on CPU which works everywhere.
 
+  ollama-pull-model:
+    image: ollama/ollama:latest
+    container_name: vault_ollama_pull_model
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    command: pull llama3.2
+    depends_on:
+      - ollama
+
   backend:
     build:
       context: ./vault-backend

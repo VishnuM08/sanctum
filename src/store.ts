@@ -665,6 +665,8 @@ export const useStore = create<StoreState>()(
             set({ inboxItems });
           } catch (e) {
             console.error('Failed to sync reminders:', e);
+            // Clean up old mock offline notifications from previous builds that stuck in localStorage
+            set((s) => ({ inboxItems: s.inboxItems.filter((i) => isUuid(i.id)) }));
           }
 
           // Sync vault if unlocked
