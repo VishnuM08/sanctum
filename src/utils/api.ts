@@ -368,6 +368,52 @@ export const api = {
     return data.reply;
   },
 
+  async chatWithAgentStream(message: string, onChunk: (chunk: string) => void): Promise<void> {
+    const token = this.getToken();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const res = await fetch(`${API_BASE}/agent/chat/stream`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ message }),
+    });
+
+    if (!res.ok) {
+      throw new Error('Failed to stream query agent');
+    }
+
+    if (!res.body) {
+      throw new Error('ReadableStream not supported');
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        
+        // SSE messages look like "data: chunk\n\n"
+        const text = decoder.decode(value, { stream: true });
+        const lines = text.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data:')) {
+            const chunk = line.substring(5); // remove "data:"
+            onChunk(chunk);
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  },
+
   async generateText(prompt: string, systemPrompt?: string): Promise<string> {
     const res = await authenticatedFetch(`${API_BASE}/agent/generate`, {
       method: 'POST',

@@ -48,7 +48,7 @@ services:
     container_name: vault_ollama_pull_model
     environment:
       - OLLAMA_HOST=http://ollama:11434
-    command: pull llama3.2
+    command: pull llama3.2:1b
     depends_on:
       - ollama
 

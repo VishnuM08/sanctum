@@ -118,10 +118,22 @@ export function AIAgentChat() {
       const online = await api.checkServer();
       setIsServerOnline(online);
 
-      let replyText = '';
+      const agentMsgId = (Date.now() + 1).toString();
+      const agentMsg: Message = {
+        id: agentMsgId,
+        sender: 'agent',
+        text: '',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, agentMsg]);
+
       if (online) {
-        // Query Llama via server
-        replyText = await api.chatWithAgent(userMsgText);
+        // Query Llama via server stream
+        await api.chatWithAgentStream(userMsgText, (chunk) => {
+          setMessages(prev => prev.map(m => 
+            m.id === agentMsgId ? { ...m, text: m.text + chunk } : m
+          ));
+        });
         
         // Refresh logs since query generates audit trail
         api.getAgentLogs().then(setAgentLogs).catch(() => {});
@@ -130,6 +142,7 @@ export function AIAgentChat() {
         await new Promise(r => setTimeout(r, 800));
         const lower = userMsgText.toLowerCase();
         const activePages = pages.filter(p => !p.isDeleted);
+        let replyText = '';
         if (lower.includes('note') || lower.includes('summary') || lower.includes('pages')) {
           replyText = `[Offline Mode] You currently have ${activePages.length} active pages in your workspace. Recent titles: ${
             activePages.slice(0, 3).map(n => n.title || 'Untitled').join(', ') || 'None'
@@ -141,15 +154,12 @@ export function AIAgentChat() {
         } else {
           replyText = "I am currently in local offline fallback mode. Please start the docker backend containers to chat with me using Llama RAG on your server!";
         }
+        
+        setMessages(prev => prev.map(m => 
+          m.id === agentMsgId ? { ...m, text: replyText } : m
+        ));
       }
 
-      const agentMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        sender: 'agent',
-        text: replyText,
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, agentMsg]);
     } catch (err) {
       toast('Failed to get response from agent');
     } finally {

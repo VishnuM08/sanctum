@@ -208,6 +208,91 @@ public class AgentService {
         return reply;
     }
 
+    public void streamChatWithAgent(User user, String userMessage, org.springframework.web.servlet.mvc.method.annotation.SseEmitter emitter) {
+        log.info("Agent streaming RAG chat request from user: {}", user.getEmail());
+        
+        List<Note> activeNotes = noteRepository.findByUserIdAndArchivedFalseOrderByUpdatedAtDesc(user.getId());
+        List<Reminder> activeReminders = reminderRepository.findByUserIdAndFiredFalseOrderByRemindAtAsc(user.getId());
+
+        StringBuilder context = new StringBuilder();
+        context.append("USER NOTES (Most Recent):\n");
+        int count = 0;
+        for (Note n : activeNotes) {
+            if (count >= 5) break;
+            context.append("- Title: ").append(n.getTitle()).append("\n");
+            
+            if (n.getAiSummary() != null && !n.getAiSummary().isBlank()) {
+                context.append("  Summary: ").append(n.getAiSummary()).append("\n");
+            } else {
+                String content = n.getContent();
+                if (content != null && content.length() > 300) {
+                    content = content.substring(0, 300) + "...";
+                }
+                context.append("  Content: ").append(content).append("\n");
+            }
+            count++;
+        }
+        
+        context.append("\nACTIVE REMINDERS:\n");
+        int rCount = 0;
+        for (Reminder r : activeReminders) {
+            if (rCount >= 10) break;
+            context.append("- ").append(r.getTitle()).append(" (scheduled for ").append(r.getRemindAt().toString()).append(")\n");
+            rCount++;
+        }
+
+        String prompt = "You are a helpful, secure, and intelligent AI personal agent for the application 'Personal Vault'. " +
+                "You assist the user by answering questions based on their notes and reminders context. " +
+                "Here is the user's data context:\n\n" +
+                context.toString() + "\n\n" +
+                "User Message: " + userMessage + "\n\n" +
+                "Answer the user's message concisely, professionally, and helpfully based on the context above. If they ask about something not in the context, help them normally but mention you have no record of it in their vault.";
+
+        try {
+            String url = ollamaHost + "/api/generate";
+            OllamaRequest request = new OllamaRequest(ollamaModel, prompt, true, null); // stream = true
+
+            restTemplate.execute(url, org.springframework.http.HttpMethod.POST, clientHttpRequest -> {
+                ObjectMapper mapper = new ObjectMapper();
+                mapper.writeValue(clientHttpRequest.getBody(), request);
+                clientHttpRequest.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+            }, clientHttpResponse -> {
+                try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(clientHttpResponse.getBody()))) {
+                    String line;
+                    ObjectMapper mapper = new ObjectMapper();
+                    while ((line = reader.readLine()) != null) {
+                        if (!line.trim().isEmpty()) {
+                            OllamaResponse chunk = mapper.readValue(line, OllamaResponse.class);
+                            if (chunk.getResponse() != null) {
+                                emitter.send(chunk.getResponse());
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("Error reading Ollama stream", e);
+                }
+                return null;
+            });
+
+            // Log the action asynchronously after streaming finishes
+            CompletableFuture.runAsync(() -> {
+                AgentLog agentLog = AgentLog.builder()
+                        .user(user)
+                        .actionType("AGENT_CHAT")
+                        .description("User asked a question via streaming AI Chatbot")
+                        .details("User asked: \"" + userMessage + "\" | Model: " + ollamaModel)
+                        .build();
+                agentLogRepository.save(agentLog);
+            });
+
+        } catch (Exception e) {
+            log.warn("Ollama streaming chat query failed: {}", e.getMessage());
+            try {
+                emitter.send("I'm sorry, I encountered an error connecting to the AI model.");
+            } catch (Exception ignored) {}
+        }
+    }
+
     public String generateText(String prompt, String systemPrompt) {
         String fullPrompt = (systemPrompt != null ? systemPrompt + "\n\n" : "") + prompt;
         try {

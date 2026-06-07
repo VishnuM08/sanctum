@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
 @RestController
 @RequestMapping("/api/agent")
 @RequiredArgsConstructor
@@ -54,6 +56,31 @@ public class AgentController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    @PostMapping(value = "/chat/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamChatWithAgent(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody AgentDto.ChatRequest request) {
+        // Create an emitter with a 60 second timeout
+        SseEmitter emitter = new SseEmitter(60000L);
+        try {
+            User user = userService.findById(principal.id())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            // Execute the streaming in a separate thread so we don't block the container thread
+            new Thread(() -> {
+                try {
+                    agentService.streamChatWithAgent(user, request.getMessage(), emitter);
+                    emitter.complete();
+                } catch (Exception e) {
+                    emitter.completeWithError(e);
+                }
+            }).start();
+        } catch (Exception e) {
+            emitter.completeWithError(e);
+        }
+        return emitter;
     }
 
     @PostMapping("/generate")
