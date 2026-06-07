@@ -6,6 +6,16 @@ import type { Template, TemplateCategory } from '../data/templates';
 import { TEMPLATE_THUMBS } from './TemplateThumb';
 import { useToast } from './Toast';
 import { NotionIcon } from './NotionIcon';
+import { motion } from 'motion/react';
+
+const gridVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.04 } }
+};
+const cardVariants = {
+  hidden: { opacity: 0, scale: 0.95 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.25 } }
+};
 
 export function Templates() {
   const createPage    = useStore((s) => s.createPage);
@@ -117,7 +127,12 @@ export function Templates() {
                       <div className="template-section-label">
                         <NotionIcon icon={cat.icon} size="1.1em" style={{ marginRight: 4 }} /> {cat.label}
                       </div>
-                      <div className="template-grid">
+                      <motion.div 
+                        className="template-grid"
+                        variants={gridVariants}
+                        initial="hidden"
+                        animate="visible"
+                      >
                         {catTemplates.map((t) => (
                           <TemplateCard
                             key={t.id}
@@ -126,14 +141,19 @@ export function Templates() {
                             onUse={() => useTemplate(t)}
                           />
                         ))}
-                      </div>
+                      </motion.div>
                     </div>
                   );
                 })
               )}
 
               {(category !== 'All' || search) && (
-                <div className="template-grid">
+                <motion.div 
+                  className="template-grid"
+                  variants={gridVariants}
+                  initial="hidden"
+                  animate="visible"
+                >
                   {filtered.map((t) => (
                     <TemplateCard
                       key={t.id}
@@ -142,7 +162,7 @@ export function Templates() {
                       onUse={() => useTemplate(t)}
                     />
                   ))}
-                </div>
+                </motion.div>
               )}
             </>
           )}
@@ -171,11 +191,12 @@ function TemplateCard({ template, onPreview, onUse }: {
   const [hovered, setHovered] = useState(false);
 
   return (
-    <div
+    <motion.div
       className="template-card"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={onPreview}
+      variants={cardVariants}
     >
       {/* Cover — SVG document preview over gradient */}
       <div
@@ -219,7 +240,7 @@ function TemplateCard({ template, onPreview, onUse }: {
           </button>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 

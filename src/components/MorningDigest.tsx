@@ -3,6 +3,7 @@ import { Search, Plus, BookOpen, Database, CheckSquare, Clock } from 'lucide-rea
 import { useStore } from '../store';
 import { format, isToday, isTomorrow, formatDistanceToNow } from 'date-fns';
 import { NotionIcon } from './NotionIcon';
+import { motion } from 'motion/react';
 
 function greeting(): string {
   return 'Hi';
@@ -18,6 +19,19 @@ function writingPrompt(): string {
   ];
   return prompts[new Date().getDay() % prompts.length];
 }
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.06 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } }
+};
 
 export function MorningDigest() {
   const user        = useStore((s) => s.user);
@@ -71,9 +85,14 @@ export function MorningDigest() {
   const editedToday = activePages.filter((p) => isToday(new Date(p.updatedAt))).length;
 
   return (
-    <div className="morning-digest">
+    <motion.div 
+      className="morning-digest"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
       {/* Hero */}
-      <div className="digest-hero">
+      <motion.div className="digest-hero" variants={itemVariants}>
         <div className="digest-greeting">
           {greeting()}, {user.name}{' '}
           {user.avatar && (user.avatar.startsWith('http://') || user.avatar.startsWith('https://')) ? (
@@ -83,10 +102,10 @@ export function MorningDigest() {
           )}
         </div>
         <div className="digest-date">{format(new Date(), 'EEEE, MMMM d, yyyy')}</div>
-      </div>
+      </motion.div>
 
       {/* Stats row */}
-      <div className="digest-stats">
+      <motion.div className="digest-stats" variants={itemVariants}>
         <div className="digest-stat">
           <BookOpen size={16} />
           <span className="digest-stat-num">{totalPages}</span>
@@ -107,22 +126,22 @@ export function MorningDigest() {
           <span className="digest-stat-num">{editedToday}</span>
           <span className="digest-stat-label">edited today</span>
         </div>
-      </div>
+      </motion.div>
 
       {/* Quick actions */}
-      <div className="digest-quick-actions">
+      <motion.div className="digest-quick-actions" variants={itemVariants}>
         <button className="digest-action-btn primary" onClick={() => createPage()}>
           <Plus size={15} /> New page
         </button>
         <button className="digest-action-btn" onClick={() => setSearchOpen(true)}>
           <Search size={15} /> Search  <span className="digest-kbd">⌘K</span>
         </button>
-      </div>
+      </motion.div>
 
       <div className="digest-grid">
         {/* Tasks due soon */}
         {dueSoon.length > 0 && (
-          <div className="digest-card">
+          <motion.div className="digest-card" variants={itemVariants}>
             <div className="digest-card-title">
               <CheckSquare size={14} /> Tasks due soon
             </div>
@@ -145,11 +164,11 @@ export function MorningDigest() {
             {dueSoon.length === 0 && (
               <div className="digest-empty">No tasks due soon 🎉</div>
             )}
-          </div>
+          </motion.div>
         )}
 
         {/* Recent pages */}
-        <div className="digest-card">
+        <motion.div className="digest-card" variants={itemVariants}>
           <div className="digest-card-title">
             <Clock size={14} /> Recently edited
           </div>
@@ -169,10 +188,10 @@ export function MorningDigest() {
               </span>
             </button>
           ))}
-        </div>
+        </motion.div>
 
         {/* Writing prompt */}
-        <div className="digest-card digest-prompt-card">
+        <motion.div className="digest-card digest-prompt-card" variants={itemVariants}>
           <div className="digest-card-title">
             <NotionIcon icon="notion_page" size="14px" style={{ marginRight: 6 }} /> Start writing
           </div>
@@ -184,9 +203,9 @@ export function MorningDigest() {
           >
             <Plus size={14} /> New page
           </button>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

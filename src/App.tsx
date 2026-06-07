@@ -13,7 +13,9 @@ import { LandingPage } from './components/LandingPage';
 import { AIAgentChat } from './components/AIAgentChat';
 import { useStore } from './store';
 import { handleBackButton, registerBackButtonHandler } from './utils/backButton';
+import { motion, AnimatePresence } from 'motion/react';
 import { OnboardingTour } from './components/OnboardingTour';
+import { MobileScreenHeader } from './components/MobileScreenHeader';
 
 
 export default function App() {
@@ -193,6 +195,7 @@ export default function App() {
     if (activeView.type === 'settings')  return <Settings section={activeView.section} />;
     if (activeView.type === 'calendar') return (
       <div className="main">
+        <MobileScreenHeader title="Calendar" />
         <div className="page-scroll">
           <MasterCalendar />
         </div>
@@ -200,6 +203,7 @@ export default function App() {
     );
     if (activeView.type === 'templates') return (
       <div className="main">
+        <MobileScreenHeader title="Templates" />
         <div className="page-scroll" style={{ scrollBehavior: 'smooth' }}>
           <Templates />
         </div>
@@ -207,6 +211,7 @@ export default function App() {
     );
     if (activeView.type === 'vault') return (
       <div className="main">
+        <MobileScreenHeader title="Vault" />
         <div className="page-scroll">
           <Vault />
         </div>
@@ -214,6 +219,7 @@ export default function App() {
     );
     if (activeView.type === 'agent') return (
       <div className="main">
+        <MobileScreenHeader title="AI Assistant" />
         <div className="page-scroll">
           <AIAgentChat />
         </div>
@@ -221,7 +227,7 @@ export default function App() {
     );
     if (activeView.type === 'page') return <PageView key={activeView.id} pageId={activeView.id} />;
 
-    // Home / morning digest
+    // Home / morning digest — greeting lives in MorningDigest on mobile
     return (
       <div className="main">
         <div className="page-scroll">
@@ -242,7 +248,19 @@ export default function App() {
       {!zenMode && !sidebarCollapsed && (
         <div className="sidebar-backdrop visible" onClick={toggleSidebar} />
       )}
-      {renderMain()}
+      
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeView.type === 'page' ? activeView.id : activeView.type}
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -15 }}
+          transition={{ duration: 0.25, ease: "easeInOut" }}
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}
+        >
+          {renderMain()}
+        </motion.div>
+      </AnimatePresence>
 
       {/* Overlay modals */}
       {searchOpen    && <SearchModal onClose={() => setSearchOpen(false)} />}
