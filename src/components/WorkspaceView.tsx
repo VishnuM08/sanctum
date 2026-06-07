@@ -275,22 +275,18 @@ export function Sidebar() {
 
           {/* Primary nav */}
           <div className="sidebar-nav">
-            {!isMobile && (
-              <>
-                <button id="tour-add-page" className="sidebar-nav-item" style={{ color: 'var(--accent)', fontWeight: 500 }} onClick={() => handleMobileNav(() => createPage())}>
-                  <span className="nav-icon"><Plus size={14} style={{ color: 'var(--accent)' }} /></span>
-                  <span>Add a page</span>
-                </button>
-                <button className="sidebar-nav-item" onClick={() => handleMobileNav(() => setSearchOpen(true))}>
-                  <span className="nav-icon"><Search size={14} /></span>
-                  <span>Search</span>
-                  <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-faint)' }}>⌘K</span>
-                </button>
-                <button className={`sidebar-nav-item ${activeView.type === 'home' ? 'active' : ''}`} onClick={() => handleMobileNav(() => navigate({ type: 'home' }))}>
-                  <span className="nav-icon"><Home size={14} /></span><span>Home</span>
-                </button>
-              </>
-            )}
+            <button id="tour-add-page" className="sidebar-nav-item" style={{ color: 'var(--accent)', fontWeight: 500 }} onClick={() => handleMobileNav(() => createPage())}>
+              <span className="nav-icon"><Plus size={14} style={{ color: 'var(--accent)' }} /></span>
+              <span>Add a page</span>
+            </button>
+            <button className="sidebar-nav-item" onClick={() => handleMobileNav(() => setSearchOpen(true))}>
+              <span className="nav-icon"><Search size={14} /></span>
+              <span>Search</span>
+              <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-faint)' }}>⌘K</span>
+            </button>
+            <button className={`sidebar-nav-item ${activeView.type === 'home' ? 'active' : ''}`} onClick={() => handleMobileNav(() => navigate({ type: 'home' }))}>
+              <span className="nav-icon"><Home size={14} /></span><span>Home</span>
+            </button>
             <button className={`sidebar-nav-item ${activeView.type === 'calendar' ? 'active' : ''}`} onClick={() => handleMobileNav(() => navigate({ type: 'calendar' }))}>
               <span className="nav-icon"><CalendarDays size={14} /></span><span>Calendar</span>
             </button>
@@ -505,11 +501,9 @@ export function Sidebar() {
             <button className="sidebar-nav-item" onClick={() => handleMobileNav(() => setTrashOpen(true))}>
               <span className="nav-icon"><Trash2 size={14} /></span><span>Trash</span>
             </button>
-            {!isMobile && (
-              <button className={`sidebar-nav-item ${activeView.type === 'settings' ? 'active' : ''}`} onClick={() => handleMobileNav(() => navigateToSettings())}>
-                <span className="nav-icon"><Settings size={14} /></span><span>Settings</span>
-              </button>
-            )}
+            <button className={`sidebar-nav-item ${activeView.type === 'settings' ? 'active' : ''}`} onClick={() => handleMobileNav(() => navigateToSettings())}>
+              <span className="nav-icon"><Settings size={14} /></span><span>Settings</span>
+            </button>
           </div>
         </div>
 
