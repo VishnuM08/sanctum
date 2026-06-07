@@ -1,5 +1,6 @@
 import { ChevronLeft } from 'lucide-react';
 import { useIsMobile } from '../utils/useIsMobile';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Props {
   title: string;
@@ -24,8 +25,18 @@ export function MobileScreenHeader({ title, subtitle, onBack, right }: Props) {
         )}
       </div>
       <div className="mobile-screen-header-center">
-        <h1 className="mobile-screen-header-title">{title}</h1>
-        {subtitle && <p className="mobile-screen-header-subtitle">{subtitle}</p>}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={title}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+          >
+            <h1 className="mobile-screen-header-title">{title}</h1>
+            {subtitle && <p className="mobile-screen-header-subtitle">{subtitle}</p>}
+          </motion.div>
+        </AnimatePresence>
       </div>
       <div className="mobile-screen-header-trailing">
         {right ?? <span className="mobile-header-spacer" />}
