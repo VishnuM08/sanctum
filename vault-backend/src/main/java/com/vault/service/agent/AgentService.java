@@ -123,6 +123,7 @@ public class AgentService {
         // 1. Gather user context (Notes & Reminders)
         List<Note> activeNotes = noteRepository.findByUserIdAndArchivedFalseOrderByUpdatedAtDesc(user.getId());
         List<Reminder> activeReminders = reminderRepository.findByUserIdAndFiredFalseOrderByRemindAtAsc(user.getId());
+        List<AgentLog> recentLogs = agentLogRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
 
         StringBuilder context = new StringBuilder();
         context.append("USER NOTES (Most Recent):\n");
@@ -150,6 +151,20 @@ public class AgentService {
             if (rCount >= 10) break;
             context.append("- ").append(r.getTitle()).append(" (scheduled for ").append(r.getRemindAt().toString()).append(")\n");
             rCount++;
+        }
+
+        context.append("\nRECENT CONVERSATION HISTORY:\n");
+        int historyCount = 0;
+        int startIdx = Math.min(recentLogs.size(), 5) - 1;
+        for (int i = startIdx; i >= 0; i--) {
+            AgentLog logEntry = recentLogs.get(i);
+            if ("AGENT_CHAT".equals(logEntry.getAction()) && logEntry.getPayload() != null) {
+                context.append(logEntry.getPayload()).append("\n");
+                historyCount++;
+            }
+        }
+        if (historyCount == 0) {
+            context.append("(No previous conversation history)\n");
         }
 
         // 2. Build RAG prompt
@@ -213,6 +228,7 @@ public class AgentService {
         
         List<Note> activeNotes = noteRepository.findByUserIdAndArchivedFalseOrderByUpdatedAtDesc(user.getId());
         List<Reminder> activeReminders = reminderRepository.findByUserIdAndFiredFalseOrderByRemindAtAsc(user.getId());
+        List<AgentLog> recentLogs = agentLogRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
 
         StringBuilder context = new StringBuilder();
         context.append("USER NOTES (Most Recent):\n");
@@ -241,6 +257,20 @@ public class AgentService {
             rCount++;
         }
 
+        context.append("\nRECENT CONVERSATION HISTORY:\n");
+        int historyCount = 0;
+        int startIdx = Math.min(recentLogs.size(), 5) - 1;
+        for (int i = startIdx; i >= 0; i--) {
+            AgentLog logEntry = recentLogs.get(i);
+            if ("AGENT_CHAT".equals(logEntry.getAction()) && logEntry.getPayload() != null) {
+                context.append(logEntry.getPayload()).append("\n");
+                historyCount++;
+            }
+        }
+        if (historyCount == 0) {
+            context.append("(No previous conversation history)\n");
+        }
+
         String prompt = "You are a helpful, secure, and intelligent AI personal agent for the application 'Personal Vault'. " +
                 "You assist the user by answering questions based on their notes and reminders context. " +
                 "Here is the user's data context:\n\n" +
@@ -251,6 +281,8 @@ public class AgentService {
         try {
             String url = ollamaHost + "/api/generate";
             OllamaRequest request = new OllamaRequest(ollamaModel, prompt, true, null); // stream = true
+
+            StringBuilder fullResponse = new StringBuilder();
 
             restTemplate.execute(url, org.springframework.http.HttpMethod.POST, clientHttpRequest -> {
                 ObjectMapper mapper = new ObjectMapper();
@@ -264,6 +296,7 @@ public class AgentService {
                         if (!line.trim().isEmpty()) {
                             OllamaResponse chunk = mapper.readValue(line, OllamaResponse.class);
                             if (chunk.getResponse() != null) {
+                                fullResponse.append(chunk.getResponse());
                                 String text = chunk.getResponse().replace("\n", "\\n");
                                 emitter.send(text);
                             }
@@ -275,15 +308,14 @@ public class AgentService {
                 return null;
             });
 
-            // Log the action asynchronously after streaming finishes
-            java.util.concurrent.CompletableFuture.runAsync(() -> {
-                AgentLog agentLog = AgentLog.builder()
-                        .user(user)
-                        .action("AGENT_CHAT")
-                        .payload("User asked a question via streaming AI Chatbot. User asked: \"" + userMessage + "\" | Model: " + ollamaModel)
-                        .build();
-                agentLogRepository.save(agentLog);
-            });
+            // Log the action synchronously after streaming finishes
+            String replyText = fullResponse.toString();
+            AgentLog agentLog = AgentLog.builder()
+                    .user(user)
+                    .action("AGENT_CHAT")
+                    .payload("User asked: \"" + userMessage + "\" | Reply: \"" + (replyText.length() > 200 ? replyText.substring(0, 197) + "..." : replyText) + "\"")
+                    .build();
+            agentLogRepository.save(agentLog);
 
         } catch (Exception e) {
             log.warn("Ollama streaming chat query failed: {}", e.getMessage());
