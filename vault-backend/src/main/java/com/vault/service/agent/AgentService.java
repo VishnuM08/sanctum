@@ -125,17 +125,31 @@ public class AgentService {
         List<Reminder> activeReminders = reminderRepository.findByUserIdAndFiredFalseOrderByRemindAtAsc(user.getId());
 
         StringBuilder context = new StringBuilder();
-        context.append("USER NOTES:\n");
+        context.append("USER NOTES (Most Recent):\n");
+        int count = 0;
         for (Note n : activeNotes) {
+            if (count >= 5) break;
             context.append("- Title: ").append(n.getTitle()).append("\n");
-            context.append("  Content: ").append(n.getContent()).append("\n");
-            if (n.getAiSummary() != null) {
-                context.append("  AI Summary: ").append(n.getAiSummary()).append("\n");
+            
+            // Prefer AI Summary if it exists, otherwise use truncated content
+            if (n.getAiSummary() != null && !n.getAiSummary().isBlank()) {
+                context.append("  Summary: ").append(n.getAiSummary()).append("\n");
+            } else {
+                String content = n.getContent();
+                if (content != null && content.length() > 300) {
+                    content = content.substring(0, 300) + "...";
+                }
+                context.append("  Content: ").append(content).append("\n");
             }
+            count++;
         }
+        
         context.append("\nACTIVE REMINDERS:\n");
+        int rCount = 0;
         for (Reminder r : activeReminders) {
+            if (rCount >= 10) break;
             context.append("- ").append(r.getTitle()).append(" (scheduled for ").append(r.getRemindAt().toString()).append(")\n");
+            rCount++;
         }
 
         // 2. Build RAG prompt
