@@ -230,8 +230,9 @@ export interface Reminder {
 export interface AgentLog {
   id: string;
   action: string;
-  description: string;
-  timestamp: string;
+  description?: string;
+  timestamp?: string;
+  createdAt?: string;
   noteTitle?: string;
   payload?: string;
 }

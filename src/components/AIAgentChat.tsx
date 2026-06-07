@@ -387,7 +387,7 @@ export function AIAgentChat() {
                       )}
                       <div className="agent-log-meta">
                         <Clock size={9} style={{ marginRight: 4, display: 'inline-block', verticalAlign: 'middle' }} />
-                        <span>{formatLogTime(log.timestamp)}</span>
+                        <span>{formatLogTime(log.timestamp || log.createdAt || '')}</span>
                       </div>
                     </div>
                   </div>
