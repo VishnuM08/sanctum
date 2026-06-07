@@ -275,12 +275,11 @@ public class AgentService {
             });
 
             // Log the action asynchronously after streaming finishes
-            CompletableFuture.runAsync(() -> {
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
                 AgentLog agentLog = AgentLog.builder()
                         .user(user)
-                        .actionType("AGENT_CHAT")
-                        .description("User asked a question via streaming AI Chatbot")
-                        .details("User asked: \"" + userMessage + "\" | Model: " + ollamaModel)
+                        .action("AGENT_CHAT")
+                        .payload("User asked a question via streaming AI Chatbot. User asked: \"" + userMessage + "\" | Model: " + ollamaModel)
                         .build();
                 agentLogRepository.save(agentLog);
             });
