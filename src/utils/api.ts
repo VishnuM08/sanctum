@@ -383,6 +383,13 @@ export const api = {
       body: JSON.stringify({ message }),
     });
 
+    if (res.status === 401 || res.status === 403) {
+      if (onUnauthorizedCallback) {
+        onUnauthorizedCallback();
+      }
+      throw new Error('UNAUTHORIZED');
+    }
+
     if (!res.ok) {
       throw new Error('Failed to stream query agent');
     }
