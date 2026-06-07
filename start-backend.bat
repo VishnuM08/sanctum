@@ -17,8 +17,8 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-echo [1/3] Starting docker-compose services...
-docker compose up -d
+echo [1/3] Starting docker-compose services (with build)...
+docker compose up --build -d
 if %errorlevel% neq 0 (
     echo [!] Failed to start containers. Make sure Docker is fully started.
     pause
@@ -36,9 +36,9 @@ if %errorlevel% neq 0 (
     goto OllamaWait
 )
 echo.
-echo [3/3] Downloading/Pulling Llama 3.2 model inside the Ollama container...
+echo [3/3] Downloading/Pulling Llama 3.2 1B model inside the Ollama container...
 echo.
-docker exec -it vault_ollama ollama pull llama3.2
+docker exec -it vault_ollama ollama pull llama3.2:1b
 
 echo.
 echo ===================================================
