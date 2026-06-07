@@ -264,7 +264,8 @@ public class AgentService {
                         if (!line.trim().isEmpty()) {
                             OllamaResponse chunk = mapper.readValue(line, OllamaResponse.class);
                             if (chunk.getResponse() != null) {
-                                emitter.send(chunk.getResponse());
+                                String text = chunk.getResponse().replace("\n", "\\n");
+                                emitter.send(text);
                             }
                         }
                     }
