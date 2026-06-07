@@ -1,6 +1,6 @@
 import { Home, Search, Settings, Plus, Files } from 'lucide-react';
 import { useStore } from '../store';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 
 export function MobileBottomNav() {
   const activeView = useStore((s) => s.activeView);

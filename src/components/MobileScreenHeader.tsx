@@ -1,6 +1,6 @@
 import { ChevronLeft } from 'lucide-react';
 import { useIsMobile } from '../utils/useIsMobile';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface Props {
   title: string;
