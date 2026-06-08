@@ -8,6 +8,7 @@ import { useStore } from '../store';
 import { useToast } from './Toast';
 import { generatePassword, passwordStrength, type PwGenOptions } from '../utils/vaultCrypto';
 import type { VaultEntry, VaultCategory } from '../types';
+import { copyToClipboard } from '../utils/clipboard';
 
 const CATEGORY_META: Record<VaultCategory, { label: string; icon: React.ReactNode; color: string }> = {
   login:    { label: 'Login',    icon: <Globe size={13} />,      color: '#2383e2' },
@@ -294,12 +295,12 @@ function VaultRow({ entry, onClick, onDelete }: { entry: VaultEntry; onClick: ()
 
   const copyPassword = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(entry.password);
+    copyToClipboard(entry.password);
     setCopied(true);
     toast('Password copied — clears in 20s');
     setTimeout(() => setCopied(false), 2000);
     // Best-effort clipboard clear
-    setTimeout(() => { navigator.clipboard.writeText('').catch(() => {}); }, 20_000);
+    setTimeout(() => { copyToClipboard('').catch(() => {}); }, 20_000);
   };
 
   const meta = CATEGORY_META[entry.category];
@@ -412,7 +413,7 @@ function VaultEntryModal({ entry, onClose }: { entry: VaultEntry | null; onClose
             <button className="vault-icon-btn" onClick={() => setShowPw((v) => !v)} title={showPw ? 'Hide' : 'Show'}>
               {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
-            <button className="vault-icon-btn" onClick={() => { navigator.clipboard.writeText(form.password); toast('Copied'); }} title="Copy">
+            <button className="vault-icon-btn" onClick={() => { copyToClipboard(form.password); toast('Copied'); }} title="Copy">
               <Copy size={15} />
             </button>
             <button className="vault-icon-btn" onClick={() => setGenOpen((v) => !v)} title="Generate password">
@@ -466,7 +467,7 @@ function PasswordGenerator({ onUse }: { onUse: (pw: string) => void }) {
       <div className="vault-gen-output">
         <code>{pw}</code>
         <button className="vault-icon-btn" onClick={() => setPw(generatePassword(opts))} title="Regenerate"><RefreshCw size={13} /></button>
-        <button className="vault-icon-btn" onClick={() => { navigator.clipboard.writeText(pw); toast('Copied'); }} title="Copy"><Copy size={13} /></button>
+        <button className="vault-icon-btn" onClick={() => { copyToClipboard(pw); toast('Copied'); }} title="Copy"><Copy size={13} /></button>
       </div>
       <div className="vault-gen-controls">
         <label className="vault-gen-length">

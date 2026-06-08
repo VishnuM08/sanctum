@@ -18,6 +18,7 @@ import { useToast } from './Toast';
 import { downloadMarkdown } from '../utils/markdownExport';
 import { exportToHtml } from '../utils/exportHtml';
 import { AIPanel } from './AIPanel';
+import { copyToClipboard } from '../utils/clipboard';
 import type { Page } from '../types';
 import { format } from 'date-fns';
 
@@ -249,7 +250,7 @@ export function PageView({ pageId }: Props) {
                     localStorage.setItem('user-templates', JSON.stringify(existing.slice(0, 20)));
                     toast('Saved as template'); setOptionsOpen(false);
                   }}
-                  onCopyLink={() => { navigator.clipboard.writeText(window.location.href); toast('Link copied'); setOptionsOpen(false); }}
+                  onCopyLink={() => { copyToClipboard(window.location.href); toast('Link copied'); setOptionsOpen(false); }}
                   onUpdatePage={updatePage}
                   mobile
                 />
@@ -336,7 +337,7 @@ export function PageView({ pageId }: Props) {
                     localStorage.setItem('user-templates', JSON.stringify(existing.slice(0, 20)));
                     toast('Saved as template'); setOptionsOpen(false);
                   }}
-                  onCopyLink={() => { navigator.clipboard.writeText(window.location.href); toast('Link copied'); setOptionsOpen(false); }}
+                  onCopyLink={() => { copyToClipboard(window.location.href); toast('Link copied'); setOptionsOpen(false); }}
                   onUpdatePage={updatePage}
                 />
               )}
@@ -662,7 +663,7 @@ function SharePopover({ page, onClose, updatePage, toast }: {
         {page.isPublished && (
           <div className="share-link-row">
             <input readOnly value={url} style={{ fontSize: 12 }} />
-            <button className="settings-btn secondary" style={{ padding: '3px 10px', fontSize: 12, whiteSpace: 'nowrap' }} onClick={() => { navigator.clipboard.writeText(url); toast('Link copied'); }}>Copy</button>
+            <button className="settings-btn secondary" style={{ padding: '3px 10px', fontSize: 12, whiteSpace: 'nowrap' }} onClick={() => { copyToClipboard(url); toast('Link copied'); }}>Copy</button>
           </div>
         )}
       </div>

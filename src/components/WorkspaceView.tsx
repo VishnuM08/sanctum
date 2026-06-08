@@ -23,6 +23,7 @@ import { ImportModal } from './ImportModal';
 import { useToast } from './Toast';
 import { formatDistanceToNow, isToday } from 'date-fns';
 import type { Page } from '../types';
+import { copyToClipboard } from '../utils/clipboard';
 import { NotionIcon } from './NotionIcon';
 import { registerBackButtonHandler } from '../utils/backButton';
 import { TEMPLATE_CATEGORIES } from '../data/templates';
@@ -833,7 +834,7 @@ function PageContextMenuPortal({ page, x, y, onClose }: {
           updatePage(id, { title: `${page.title} (copy)`, icon: page.icon, content: page.content });
           toast('Duplicated'); onClose();
         }}>Duplicate</button>
-        <button className="dropdown-item" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}#page-${page.id}`); toast('Link copied'); onClose(); }}>Copy link</button>
+        <button className="dropdown-item" onClick={() => { copyToClipboard(`${window.location.origin}#page-${page.id}`); toast('Link copied'); onClose(); }}>Copy link</button>
         <div className="dropdown-sep" />
         <button className="dropdown-item" onClick={() => { toggleFavorite(page.id); toast(page.isFavorite ? 'Removed from Favorites' : 'Added to Favorites'); onClose(); }}>
           {page.isFavorite ? '★ Remove from Favorites' : '☆ Add to Favorites'}

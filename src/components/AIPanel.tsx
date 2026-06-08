@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Sparkles, X, Send, Copy, CheckCheck } from 'lucide-react';
 import { useToast } from './Toast';
 import { api } from '../utils/api';
+import { copyToClipboard } from '../utils/clipboard';
 
 interface Props {
   pageTitle: string;
@@ -80,7 +81,7 @@ export function AIPanel({ pageTitle, pageContent, onInsert, onClose }: Props) {
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(result);
+    copyToClipboard(result);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
