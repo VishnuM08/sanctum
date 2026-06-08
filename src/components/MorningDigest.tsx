@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Search, Plus, BookOpen, Database, CheckSquare, Clock, Archive, CalendarDays, LayoutTemplate, Bot } from 'lucide-react';
+import { Search, Plus, BookOpen, Database, CheckSquare, Clock } from 'lucide-react';
 import { useStore } from '../store';
 import { format, isToday, isTomorrow, formatDistanceToNow } from 'date-fns';
 import { NotionIcon } from './NotionIcon';
@@ -37,7 +37,6 @@ export function MorningDigest() {
   const user        = useStore((s) => s.user);
   const pages       = useStore((s) => s.pages);
   const databases   = useStore((s) => s.databases);
-  const navigate      = useStore((s) => s.navigate);
   const navigateToPage = useStore((s) => s.navigateToPage);
   const createPage  = useStore((s) => s.createPage);
   const setSearchOpen = useStore((s) => s.setSearchOpen);
@@ -136,26 +135,6 @@ export function MorningDigest() {
         </button>
         <button className="digest-action-btn" onClick={() => setSearchOpen(true)}>
           <Search size={15} /> Search  <span className="digest-kbd">⌘K</span>
-        </button>
-      </motion.div>
-
-      {/* App Launcher / Navigation Hub */}
-      <motion.div className="digest-app-grid" variants={itemVariants}>
-        <button className="digest-app-btn" onClick={() => navigate({ type: 'vault' })}>
-          <div className="digest-app-icon vault"><Archive size={22} strokeWidth={2} /></div>
-          <span>Vault</span>
-        </button>
-        <button className="digest-app-btn" onClick={() => navigate({ type: 'calendar' })}>
-          <div className="digest-app-icon calendar"><CalendarDays size={22} strokeWidth={2} /></div>
-          <span>Calendar</span>
-        </button>
-        <button className="digest-app-btn" onClick={() => navigate({ type: 'templates' })}>
-          <div className="digest-app-icon templates"><LayoutTemplate size={22} strokeWidth={2} /></div>
-          <span>Templates</span>
-        </button>
-        <button className="digest-app-btn" onClick={() => navigate({ type: 'agent' })}>
-          <div className="digest-app-icon agent"><Bot size={22} strokeWidth={2} /></div>
-          <span>AI Agent</span>
         </button>
       </motion.div>
 
