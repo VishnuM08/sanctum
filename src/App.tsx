@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, Component, ErrorInfo, ReactNode } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { PageView } from './components/PageView';
 import { Settings } from './components/Settings';
@@ -17,6 +17,31 @@ import { motion, AnimatePresence } from 'motion/react';
 import { OnboardingTour } from './components/OnboardingTour';
 import { MobileScreenHeader } from './components/MobileScreenHeader';
 
+class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean, error: Error | null}> {
+  constructor(props: {children: ReactNode}) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 40, color: 'red', fontFamily: 'monospace' }}>
+          <h2>Something went wrong.</h2>
+          <pre style={{ whiteSpace: 'pre-wrap' }}>{this.state.error?.toString()}</pre>
+          <pre style={{ whiteSpace: 'pre-wrap', marginTop: 20 }}>{this.state.error?.stack}</pre>
+          <button onClick={() => window.location.reload()} style={{ marginTop: 20, padding: '8px 16px', background: '#333', color: 'white', border: 'none', borderRadius: 4 }}>Reload</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function App() {
   const activeView      = useStore((s) => s.activeView);
@@ -243,41 +268,43 @@ export default function App() {
   }
 
   return (
-    <div className={`app ${zenMode ? 'zen-mode' : ''}`}>
-      {!zenMode && <Sidebar />}
-      {!zenMode && !sidebarCollapsed && (
-        <div className="sidebar-backdrop visible" onClick={toggleSidebar} />
-      )}
-      
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={activeView.type === 'page' ? activeView.id : activeView.type}
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -15 }}
-          transition={{ duration: 0.25, ease: "easeInOut" }}
-          style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}
-        >
-          {renderMain()}
-        </motion.div>
-      </AnimatePresence>
+    <ErrorBoundary>
+      <div className={`app ${zenMode ? 'zen-mode' : ''}`}>
+        {!zenMode && <Sidebar />}
+        {!zenMode && !sidebarCollapsed && (
+          <div className="sidebar-backdrop visible" onClick={toggleSidebar} />
+        )}
+        
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeView.type === 'page' ? activeView.id : activeView.type}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}
+          >
+            {renderMain()}
+          </motion.div>
+        </AnimatePresence>
 
-      {/* Overlay modals */}
-      {searchOpen    && <SearchModal onClose={() => setSearchOpen(false)} />}
-      {shortcutsOpen && <KeyboardShortcutsModal onClose={() => setShortcutsOpen(false)} />}
-      <OnboardingTour />
+        {/* Overlay modals */}
+        {searchOpen    && <SearchModal onClose={() => setSearchOpen(false)} />}
+        {shortcutsOpen && <KeyboardShortcutsModal onClose={() => setShortcutsOpen(false)} />}
+        <OnboardingTour />
 
-      {zenMode && (
-        <button
-          className="zen-exit-btn"
-          onClick={toggleZenMode}
-          title="Exit zen mode (Esc)"
-        >
-          Exit zen
-        </button>
-      )}
+        {zenMode && (
+          <button
+            className="zen-exit-btn"
+            onClick={toggleZenMode}
+            title="Exit zen mode (Esc)"
+          >
+            Exit zen
+          </button>
+        )}
 
-      {!zenMode && <MobileBottomNav />}
-    </div>
+        {!zenMode && <MobileBottomNav />}
+      </div>
+    </ErrorBoundary>
   );
 }
