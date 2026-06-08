@@ -49,10 +49,7 @@ public class IntentExtractor {
             Respond ONLY in JSON format matching this schema:
             {
               "reminders": [
-                {
-                  "title": "task title",
-                  "remind_at": "YYYY-MM-DDTHH:mm:SSZ"
-                }
+                // list of extracted reminders. If NONE are found, return an empty array [].
               ],
               "summary": "1-sentence summary",
               "tags": ["tag1", "tag2"]

@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import jakarta.annotation.PostConstruct;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -44,6 +46,22 @@ public class AgentService {
 
     @Value("${ollama.model:llama3.2}")
     private String ollamaModel;
+
+    @PostConstruct
+    public void cleanupHallucinatedReminders() {
+        log.info("Cleaning up any hallucinated LLM reminders from the database...");
+        try {
+            reminderRepository.findAll().forEach(r -> {
+                String t = r.getTitle() != null ? r.getTitle().toLowerCase() : "";
+                if (r.isAiGenerated() && (t.equals("call mom") || t.equals("pay electricity bill") || t.equals("task title"))) {
+                    reminderRepository.delete(r);
+                    log.info("Deleted hallucinated reminder: {}", r.getTitle());
+                }
+            });
+        } catch (Exception e) {
+            log.error("Failed to clean up hallucinated reminders", e);
+        }
+    }
 
     @Async
     @Transactional
@@ -72,6 +90,12 @@ public class AgentService {
             if (intent.getReminders() != null) {
                 intent.getReminders().forEach(r -> {
                     try {
+                        String t = r.getTitle() != null ? r.getTitle().toLowerCase() : "";
+                        if (t.equals("call mom") || t.equals("pay electricity bill") || t.equals("task title")) {
+                            log.info("Skipping hallucinated reminder payload: {}", r.getTitle());
+                            return; // skip!
+                        }
+
                         Instant remindAt = Instant.parse(r.getRemindAt());
                         
                         Reminder reminder = Reminder.builder()
