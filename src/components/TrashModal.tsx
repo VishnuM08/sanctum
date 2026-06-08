@@ -7,7 +7,8 @@ interface Props {
 }
 
 export function TrashModal({ onClose }: Props) {
-  const deletedPages = useStore((s) => s.getDeletedPages());
+  const pages = useStore((s) => s.pages);
+  const deletedPages = pages.filter((p) => p.isDeleted);
   const restorePage = useStore((s) => s.restorePage);
   const permanentlyDeletePage = useStore((s) => s.permanentlyDeletePage);
 
