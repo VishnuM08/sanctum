@@ -287,6 +287,10 @@ interface StoreState {
 
 // ── Store ────────────────────────────────────────────────────────────────────
 
+// Track IDs currently being permanently deleted so syncWithBackend won't re-add
+// them from the server while the hard-delete request is still in-flight.
+const permanentlyDeletingIds = new Set<string>();
+
 export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
@@ -466,6 +470,10 @@ export const useStore = create<StoreState>()(
 
           // 1. Process server pages
           for (const serverPage of parsedPages) {
+            // Skip pages that are currently being hard-deleted locally — don't
+            // re-add them just because they still show up in the server response.
+            if (permanentlyDeletingIds.has(serverPage.id)) continue;
+
             const localPage = currentPages.find((p) => p.id === serverPage.id);
             if (localPage) {
               const isDirty = updateTimers[serverPage.id] !== undefined || currentSaving[serverPage.id] === 'saving';
@@ -847,11 +855,20 @@ export const useStore = create<StoreState>()(
           };
         });
 
-        // Trigger permanent hard-delete on backend for all collected IDs
+        // Trigger permanent hard-delete on backend for all collected IDs.
+        // Mark each ID as "being deleted" so syncWithBackend doesn't re-add
+        // them from the server response while the request is in-flight.
         deletedIds.forEach((pId) => {
           if (api.getToken() && isUuid(pId)) {
+            permanentlyDeletingIds.add(pId);
             api.deleteNote(pId)
-              .catch((err) => console.error(`Failed to permanently delete page ${pId} on backend`, err));
+              .then(() => {
+                permanentlyDeletingIds.delete(pId);
+              })
+              .catch((err) => {
+                permanentlyDeletingIds.delete(pId);
+                console.error(`Failed to permanently delete page ${pId} on backend`, err);
+              });
           }
         });
       },

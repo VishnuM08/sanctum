@@ -71,8 +71,10 @@ public class NoteService {
 
     @Transactional
     public void deleteNote(UUID userId, UUID id) {
-        Note note = noteRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Note not found"));
+        Note note = noteRepository.findById(id).orElse(null);
+
+        // Already deleted — treat as idempotent success
+        if (note == null) return;
 
         if (!note.getUser().getId().equals(userId)) {
             throw new RuntimeException("Unauthorized");

@@ -18,11 +18,11 @@ const cardVariants = {
 };
 
 export function Templates() {
-  const createPage    = useStore((s) => s.createPage);
-  const updatePage    = useStore((s) => s.updatePage);
-  const navigate      = useStore((s) => s.navigate);
+  const createPage     = useStore((s) => s.createPage);
+  const updatePage     = useStore((s) => s.updatePage);
+  const navigate       = useStore((s) => s.navigate);
   const navigateToPage = useStore((s) => s.navigateToPage);
-  const { toast }     = useToast();
+  const { toast }      = useToast();
 
   // Read initial category from navigation state
   const navCategory = (() => {
@@ -42,15 +42,17 @@ export function Templates() {
     return matchCat && matchQ;
   });
 
-  const useTemplate = (template: Template) => {
+  const useTemplate = (t: Template | null) => {
+    if (!t) return;
     const pageId = createPage(null);
+    // Overwrite the content, title, icon, cover
     updatePage(pageId, {
-      title:   template.name,
-      icon:    template.icon,
-      cover:   template.cover,
-      content: template.content,
+      title: t.name,
+      icon: t.icon,
+      cover: t.cover,
+      content: JSON.parse(JSON.stringify(t.content)),
     });
-    toast(`Created from "${template.name}" template`);
+    toast(`Created page from "${t.name}"`);
     navigateToPage(pageId);
   };
 
