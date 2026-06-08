@@ -25,6 +25,7 @@ import { formatDistanceToNow, isToday } from 'date-fns';
 import type { Page } from '../types';
 import { NotionIcon } from './NotionIcon';
 import { registerBackButtonHandler } from '../utils/backButton';
+import { TEMPLATE_CATEGORIES } from '../data/templates';
 
 // ── Section toggle state ────────────────────────────────────────────────────
 interface Sections {
