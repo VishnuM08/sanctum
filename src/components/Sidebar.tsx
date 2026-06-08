@@ -575,9 +575,17 @@ function FlatPageRow({ page, depth, showTime, vault, onContextMenu }: {
   const activeView    = useStore((s) => s.activeView);
   const navigateToPage = useStore((s) => s.navigateToPage);
   const isActive = activeView.type === 'page' && activeView.id === page.id;
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isActive && ref.current) {
+      ref.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [isActive]);
 
   return (
     <div
+      ref={ref}
       className={`page-tree-row ${isActive ? 'active' : ''}`}
       style={{ paddingLeft: 12 + depth * 18 }}
       onClick={() => {
@@ -613,13 +621,24 @@ function FlatPageRow({ page, depth, showTime, vault, onContextMenu }: {
 function SortablePageRow(props: { page: Page; depth: number; showTime?: boolean; onContextMenu: (x: number, y: number) => void }) {
   const { page } = props;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id });
+  const activeView = useStore((s) => s.activeView);
+  const isActive = activeView.type === 'page' && (activeView as any).id === page.id;
+  const innerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isActive && innerRef.current) {
+      innerRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [isActive]);
+
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.3 : 1 }}
     >
       <div
-        className={`page-tree-row ${(() => { const av = useStore.getState().activeView; return av.type === 'page' && (av as { type: 'page'; id: string }).id === page.id; })() ? 'active' : ''}`}
+        ref={innerRef}
+        className={`page-tree-row ${isActive ? 'active' : ''}`}
         style={{ paddingLeft: 12 }}
         onClick={() => {
           useStore.getState().navigateToPage(page.id);
@@ -714,6 +733,13 @@ function PageTreeItem({ page, depth, dragListeners, dragAttributes, onContextMen
     .filter((p): p is Page => Boolean(p && !p.isDeleted));
   const hasChildren = children.length > 0;
   const paddingLeft = 12 + depth * 18;
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isActive && ref.current) {
+      ref.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [isActive]);
 
   const handleChildDragEnd = (e: DragEndEvent) => {
     setDraggingChildId(null);
@@ -730,6 +756,7 @@ function PageTreeItem({ page, depth, dragListeners, dragAttributes, onContextMen
   return (
     <div className="page-tree-item">
       <div
+        ref={ref}
         className={`page-tree-row ${isActive ? 'active' : ''} ${page.isExpanded ? 'expanded' : ''}`}
         style={{ paddingLeft }}
         onClick={() => {
