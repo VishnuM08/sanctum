@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, ArrowLeft } from 'lucide-react';
+import { Search, ArrowLeft, Clock, Sparkles, CheckCircle2, Bookmark, Tag, Layers, ChevronRight, BookOpen, AlertCircle } from 'lucide-react';
 import { useStore } from '../store';
 import { TEMPLATES, TEMPLATE_CATEGORIES } from '../data/templates';
 import type { Template, TemplateCategory } from '../data/templates';
@@ -10,12 +10,79 @@ import { motion, AnimatePresence } from 'motion/react';
 
 const gridVariants = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.04 } }
+  visible: { opacity: 1, transition: { staggerChildren: 0.03 } }
 };
 const cardVariants = {
-  hidden: { opacity: 0, scale: 0.95 },
-  visible: { opacity: 1, scale: 1, transition: { duration: 0.25 } }
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { type: 'spring', damping: 20, stiffness: 180 } }
 };
+
+// ── Dynamic template stats parser ──────────────────────────────────────────
+
+interface TemplateStats {
+  wordCount: number;
+  readTime: number;
+  complexity: 'Simple' | 'Medium' | 'Pro';
+  counts: {
+    todos: number;
+    bullets: number;
+    headings: number;
+    callouts: number;
+  };
+  features: string[];
+}
+
+function getTemplateStats(content: any): TemplateStats {
+  let wordCount = 0;
+  let todos = 0;
+  let bullets = 0;
+  let headings = 0;
+  let callouts = 0;
+
+  function traverse(node: any) {
+    if (!node) return;
+    if (node.type === 'text' && typeof node.text === 'string') {
+      wordCount += node.text.trim().split(/\s+/).filter(Boolean).length;
+    }
+    if (node.type === 'taskItem') todos++;
+    if (node.type === 'listItem') bullets++;
+    if (node.type === 'heading') headings++;
+    if (node.type === 'calloutBlock') callouts++;
+
+    if (Array.isArray(node.content)) {
+      node.content.forEach(traverse);
+    }
+  }
+
+  traverse(content);
+
+  const readTime = Math.max(1, Math.ceil(wordCount / 180));
+  
+  // Complexity determination based on structure & length
+  let complexity: 'Simple' | 'Medium' | 'Pro' = 'Simple';
+  const totalElements = todos + bullets + headings + callouts;
+  if (totalElements > 15 || wordCount > 250) {
+    complexity = 'Pro';
+  } else if (totalElements > 6 || wordCount > 100) {
+    complexity = 'Medium';
+  }
+
+  // Detect featured nodes for premium tag badges
+  const features: string[] = [];
+  if (todos > 0) features.push('Checklist');
+  if (bullets > 0) features.push('Lists');
+  if (headings > 0) features.push('Sections');
+  if (callouts > 0) features.push('Callouts');
+  if (features.length === 0) features.push('Document');
+
+  return {
+    wordCount,
+    readTime,
+    complexity,
+    counts: { todos, bullets, headings, callouts },
+    features,
+  };
+}
 
 export function Templates() {
   const createPage     = useStore((s) => s.createPage);
@@ -45,7 +112,6 @@ export function Templates() {
   const useTemplate = (t: Template | null) => {
     if (!t) return;
     const pageId = createPage(null);
-    // Overwrite the content, title, icon, cover
     updatePage(pageId, {
       title: t.name,
       icon: t.icon,
@@ -61,15 +127,14 @@ export function Templates() {
       {/* Header */}
       <div className="templates-header">
         <button
-          className="topbar-btn"
+          className="topbar-btn templates-back-btn"
           onClick={() => navigate({ type: 'home' })}
-          style={{ marginRight: 8 }}
         >
-          <ArrowLeft size={15} />
+          <ArrowLeft size={16} />
         </button>
         <div>
           <h1 className="templates-title">Templates</h1>
-          <p className="templates-subtitle">{TEMPLATES.length} templates to get started instantly</p>
+          <p className="templates-subtitle">Professional templates designed to streamline your workspace</p>
         </div>
       </div>
 
@@ -80,8 +145,8 @@ export function Templates() {
             className={`template-cat-btn ${category === 'All' ? 'active' : ''}`}
             onClick={() => setCategory('All')}
           >
-            <span><NotionIcon icon="notion_folder" size="1.1em" /></span>
-            <span>All templates</span>
+            <span className="template-cat-icon-wrap"><NotionIcon icon="notion_folder" size="1.05em" /></span>
+            <span className="template-cat-label">All templates</span>
             <span className="template-cat-count">{TEMPLATES.length}</span>
           </button>
 
@@ -91,8 +156,8 @@ export function Templates() {
               className={`template-cat-btn ${category === cat.label ? 'active' : ''}`}
               onClick={() => setCategory(cat.label)}
             >
-              <span><NotionIcon icon={cat.icon} size="1.1em" /></span>
-              <span>{cat.label}</span>
+              <span className="template-cat-icon-wrap"><NotionIcon icon={cat.icon} size="1.05em" /></span>
+              <span className="template-cat-label">{cat.label}</span>
               <span className="template-cat-count">{cat.count}</span>
             </button>
           ))}
@@ -102,21 +167,22 @@ export function Templates() {
         <div className="templates-main">
           {/* Search */}
           <div className="templates-search-wrap">
-            <Search size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+            <Search size={15} style={{ color: 'var(--text-placeholder)', flexShrink: 0 }} />
             <input
               className="templates-search"
               placeholder="Search templates…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+            <span className="templates-search-kbd">Ctrl K</span>
           </div>
 
           {/* Grid */}
           {filtered.length === 0 ? (
             <div className="templates-empty">
-              <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>
-              <div style={{ fontWeight: 600 }}>No templates found</div>
-              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Try a different search or category</div>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>🔍</div>
+              <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 15 }}>No templates found</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>Try a different search query or category</div>
             </div>
           ) : (
             <>
@@ -127,7 +193,7 @@ export function Templates() {
                   return (
                     <div key={cat.label} className="template-section">
                       <div className="template-section-label">
-                        <NotionIcon icon={cat.icon} size="1.1em" style={{ marginRight: 4 }} /> {cat.label}
+                        <NotionIcon icon={cat.icon} size="1.1em" style={{ marginRight: 6 }} /> {cat.label}
                       </div>
                       <motion.div 
                         className="template-grid"
@@ -192,13 +258,11 @@ function TemplateCard({ template, onPreview, onUse }: {
   onPreview: () => void;
   onUse: () => void;
 }) {
-  const [hovered, setHovered] = useState(false);
+  const stats = getTemplateStats(template.content);
 
   return (
     <motion.div
       className="template-card"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       onClick={onPreview}
       variants={cardVariants}
     >
@@ -213,37 +277,41 @@ function TemplateCard({ template, onPreview, onUse }: {
           overflow: 'hidden',
         }}
       >
-        {(() => {
-          const ThumbComp = TEMPLATE_THUMBS[template.id];
-          return ThumbComp
-            ? <ThumbComp />
-            : <span className="template-card-icon"><NotionIcon icon={template.icon} size="1.5em" /></span>;
-        })()}
+        <div className="template-card-cover-inner">
+          {(() => {
+            const ThumbComp = TEMPLATE_THUMBS[template.id];
+            return ThumbComp
+              ? <ThumbComp />
+              : <span className="template-card-icon"><NotionIcon icon={template.icon} size="1.5em" /></span>;
+          })()}
+        </div>
+        <div className="template-card-cover-tag">{stats.readTime} min read</div>
       </div>
 
       {/* Body */}
       <div className="template-card-body">
-        <div className="template-card-name">{template.name}</div>
+        <div className="template-card-header-row">
+          <span className="template-card-icon-inline"><NotionIcon icon={template.icon} size="1.1em" /></span>
+          <span className="template-card-name">{template.name}</span>
+        </div>
         <div className="template-card-desc">{template.description}</div>
-      </div>
-
-      {/* Hover overlay */}
-      {hovered && (
-        <div className="template-card-overlay">
+        
+        {/* Sleek FANG-style slide-up action row */}
+        <div className="template-card-actions">
           <button
-            className="template-use-btn"
+            className="template-card-btn-use"
             onClick={(e) => { e.stopPropagation(); onUse(); }}
           >
-            Use template
+            Use Template
           </button>
           <button
-            className="template-preview-btn"
+            className="template-card-btn-preview"
             onClick={(e) => { e.stopPropagation(); onPreview(); }}
           >
             Preview
           </button>
         </div>
-      )}
+      </div>
     </motion.div>
   );
 }
@@ -255,6 +323,8 @@ function TemplatePreview({ template, onClose, onUse }: {
   onClose: () => void;
   onUse: () => void;
 }) {
+  const stats = getTemplateStats(template.content);
+
   return (
     <>
       <motion.div
@@ -263,53 +333,126 @@ function TemplatePreview({ template, onClose, onUse }: {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
+        transition={{ duration: 0.18 }}
       />
       <motion.div
         className="template-preview-panel"
-        initial={{ x: '100%', opacity: 0.9 }}
-        animate={{ x: 0, opacity: 1 }}
-        exit={{ x: '100%', opacity: 0.9 }}
-        transition={{ type: 'spring', damping: 26, stiffness: 220 }}
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
+        transition={{ type: 'spring', damping: 28, stiffness: 240 }}
       >
         {/* Header */}
         <div className="template-preview-header">
-          <div>
+          <div className="template-preview-header-meta">
             <div className="template-preview-name">
-              <NotionIcon icon={template.icon} size="1.2em" style={{ marginRight: 6 }} /> {template.name}
+              <NotionIcon icon={template.icon} size="1.25em" style={{ marginRight: 6 }} /> {template.name}
             </div>
             <div className="template-preview-cat">{template.category}</div>
           </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button className="settings-btn primary" onClick={onUse}>
-              Use template
-            </button>
-            <button className="topbar-btn" onClick={onClose} style={{ fontSize: 18, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="template-preview-header-actions">
+            <button className="template-preview-close-btn" onClick={onClose}>
               ✕
             </button>
           </div>
         </div>
 
-        {/* Cover preview with SVG thumb */}
-        <div style={{
-          height: 160,
-          background: template.cover ? template.cover.value : 'var(--bg-hover)',
-          flexShrink: 0,
-          overflow: 'hidden',
-        }}>
-          {(() => {
-            const ThumbComp = TEMPLATE_THUMBS[template.id];
-            return ThumbComp ? <ThumbComp /> : null;
-          })()}
+        {/* Dual Pane split container */}
+        <div className="template-preview-dual-pane">
+          {/* Left Pane: Document Canvas */}
+          <div className="template-preview-left-canvas">
+            {/* Embedded Page Cover */}
+            <div className="template-preview-cover-banner" style={{
+              background: template.cover ? template.cover.value : 'var(--bg-hover)',
+              height: 140,
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative'
+            }}>
+              {(() => {
+                const ThumbComp = TEMPLATE_THUMBS[template.id];
+                return ThumbComp ? <div className="template-preview-banner-thumb"><ThumbComp /></div> : null;
+              })()}
+            </div>
+
+            <div className="template-preview-document-body">
+              <div className="template-preview-doc-icon"><NotionIcon icon={template.icon} size="48px" /></div>
+              <h1 className="template-preview-doc-title">{template.name}</h1>
+              <p className="template-preview-doc-desc">{template.description}</p>
+
+              <TemplateContentPreview content={template.content} />
+            </div>
+          </div>
+
+          {/* Right Pane: Sticky Details Sidebar */}
+          <div className="template-preview-right-sidebar">
+            <div className="preview-cta-card">
+              <button className="preview-primary-use-btn" onClick={onUse}>
+                <Sparkles size={14} style={{ marginRight: 6 }} /> Use this template
+              </button>
+              <p className="preview-cta-subtext">Instantly adds a ready-to-use page to your personal workspace.</p>
+            </div>
+
+            <div className="preview-sidebar-section">
+              <h3 className="preview-sidebar-section-title">Template details</h3>
+              <div className="preview-stats-grid">
+                <div className="preview-stat-item">
+                  <div className="preview-stat-label">Category</div>
+                  <div className={`preview-category-pill cat-${template.category.toLowerCase().replace(/\s+/g, '-')}`}>
+                    {template.category}
+                  </div>
+                </div>
+                <div className="preview-stat-item">
+                  <div className="preview-stat-label">Complexity</div>
+                  <div className={`preview-complexity-pill tier-${stats.complexity.toLowerCase()}`}>
+                    <Sparkles size={11} style={{ marginRight: 4, flexShrink: 0 }} /> {stats.complexity}
+                  </div>
+                </div>
+                <div className="preview-stat-item">
+                  <div className="preview-stat-label">Reading Time</div>
+                  <div className="preview-stat-val-with-icon">
+                    <Clock size={13} style={{ marginRight: 5, color: 'var(--text-muted)' }} />
+                    <span>{stats.readTime} min read</span>
+                  </div>
+                </div>
+                <div className="preview-stat-item">
+                  <div className="preview-stat-label">Word Count</div>
+                  <div className="preview-stat-val-with-icon">
+                    <BookOpen size={13} style={{ marginRight: 5, color: 'var(--text-muted)' }} />
+                    <span>{stats.wordCount} words</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {stats.features && stats.features.length > 0 && (
+              <div className="preview-sidebar-section">
+                <h3 className="preview-sidebar-section-title">Components included</h3>
+                <div className="preview-features-list">
+                  {stats.features.map((feat) => (
+                    <div className="preview-feature-tag" key={feat}>
+                      <CheckCircle2 size={13} className="preview-feature-check" />
+                      <span>{feat} system</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="preview-sidebar-section info-callout">
+              <AlertCircle size={14} className="info-callout-icon" />
+              <div className="info-callout-text">
+                Fully editable. Customize blocks, add lists, or attach notes after creating.
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Content preview */}
-        <div className="template-preview-content">
-          <div style={{ marginBottom: 8 }}><NotionIcon icon={template.icon} size="48px" /></div>
-          <div className="template-preview-title">{template.name}</div>
-          <div style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 20 }}>{template.description}</div>
-
-          <TemplateContentPreview content={template.content} />
+        {/* Sticky Mobile Floating Action Bar */}
+        <div className="template-preview-mobile-cta-wrap">
+          <button className="preview-primary-use-btn mobile-cta" onClick={onUse}>
+            <Sparkles size={14} style={{ marginRight: 6 }} /> Use Template
+          </button>
         </div>
       </motion.div>
     </>
