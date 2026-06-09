@@ -6953,133 +6953,176 @@ mark.find-highlight-active { background: rgba(255, 159, 0, 0.6); border-radius: 
   .home-state {
     padding: 24px 16px !important;
   }
-  /* Native Mobile Digest (Premium Overhaul for v1.1.7) */
+  /* Native Mobile Digest (Premium Overhaul for v1.1.9) */
   .morning-digest {
-    padding: calc(16px + env(safe-area-inset-top, 0px)) 16px calc(110px + env(safe-area-inset-bottom, 0px)) !important;
-    gap: 20px !important;
+    padding: calc(64px + env(safe-area-inset-top, 0px)) 16px calc(160px + env(safe-area-inset-bottom, 0px)) !important;
+    gap: 16px !important;
   }
+  
+  /* Floating settings gear top-bar styling for Home screen */
+  .home-main .mobile-screen-header {
+    background: transparent !important;
+    border-bottom: none !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 50 !important;
+  }
+  .home-main .mobile-screen-header .mobile-screen-header-title {
+    display: none !important;
+  }
+  .home-main .page-scroll {
+    padding-top: 0 !important;
+  }
+
+  /* Spacious, cardless welcome hero */
   .digest-hero {
-    padding: 24px 20px !important;
-    border-radius: var(--radius-lg) !important;
+    padding: 24px 0 8px 0 !important;
+    border-radius: 0 !important;
     margin-top: 0 !important;
-    background: var(--bg-glass) !important;
-    border: 1px solid var(--glass-border) !important;
-    box-shadow: var(--shadow-sm) !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
     display: flex !important;
     flex-direction: column !important;
-    gap: 12px !important;
+    gap: 4px !important;
+  }
+  .digest-hero::before {
+    display: none !important;
+  }
+  .digest-hero-main {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 4px !important;
   }
   .digest-greeting {
-    font-size: 24px !important;
+    font-size: 28px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.03em !important;
+    color: var(--text-primary) !important;
     gap: 8px !important;
   }
   .digest-avatar {
-    width: 32px;
-    height: 32px;
+    width: 32px !important;
+    height: 32px !important;
   }
   .digest-avatar-emoji {
-    width: 32px;
-    height: 32px;
+    width: 32px !important;
+    height: 32px !important;
   }
   .digest-date {
-    font-size: 13px !important;
-    padding: 4px 10px !important;
+    font-size: 14px !important;
+    color: var(--text-muted) !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    font-weight: 500 !important;
   }
   .digest-quote {
-    font-size: 13px !important;
-    padding: 10px 12px !important;
+    display: none !important; /* Hide quote on mobile to eliminate clutter */
   }
-  /* Mobile-only Segmented Tabs */
-  .digest-mobile-tabs {
+
+  /* Flat Minimal Analytics Row (Zero boxiness, ultra-premium!) */
+  .digest-stats-bento {
     display: flex !important;
-    background: var(--bg-glass) !important;
-    border: 1px solid var(--glass-border) !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
-    padding: 4px !important;
-    border-radius: 30px !important;
-    margin: 4px 0 8px 0 !important;
-    box-shadow: var(--shadow-sm) !important;
-    gap: 4px !important;
+    justify-content: space-between !important;
+    background: transparent !important;
+    padding: 16px 0 !important;
+    border-bottom: 0.5px solid var(--border-hairline) !important;
+    margin: 8px 0 !important;
+    gap: 0 !important;
+    overflow: visible !important;
   }
-  .digest-tab-btn {
+  .digest-stat-card {
     flex: 1 !important;
-    display: flex !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
+    padding: 4px 0 !important;
+    gap: 2px !important;
+  }
+  .digest-stat-icon-wrap {
+    display: none !important; /* Hide bulky icons on mobile */
+  }
+  .digest-stat-val {
+    font-size: 22px !important;
+    font-weight: 700 !important;
+    color: var(--text-primary) !important;
+    line-height: 1.1 !important;
+  }
+  .digest-stat-lbl {
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    color: var(--text-muted) !important;
+  }
+
+  /* Hide redundant action dock on mobile */
+  .digest-quick-dock {
+    display: none !important;
+  }
+
+  /* Flat Underlined Tab Switcher (Threads-style minimalism!) */
+  .digest-mobile-tabs {
+    display: flex !important;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 0.5px solid var(--border-hairline) !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 12px 0 16px 0 !important;
+    box-shadow: none !important;
+    gap: 24px !important;
+  }
+  .digest-tab-btn {
+    flex: none !important;
+    display: flex !important;
+    align-items: center !important;
     gap: 6px !important;
-    padding: 8px 16px !important;
-    border-radius: 20px !important;
-    font-size: 13px !important;
-    font-weight: 500 !important;
+    padding: 10px 4px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
     color: var(--text-muted) !important;
     background: transparent !important;
     border: none !important;
     cursor: pointer !important;
-    transition: all var(--transition-fast) !important;
+    border-radius: 0 !important;
+    transition: color var(--transition-fast) !important;
+    position: relative !important;
   }
   .digest-tab-btn.active {
-    background: var(--bg-app) !important;
+    background: transparent !important;
     color: var(--accent) !important;
-    box-shadow: var(--shadow-sm) !important;
-    border: 0.5px solid var(--border-hairline) !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  .digest-tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2.5px;
+    background: var(--accent);
+    border-radius: 2px;
   }
 
-  /* Horizontal Stats Carousel (Saves premium space and scrolling fatigue) */
-  .digest-stats-bento {
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    gap: 12px !important;
-    padding-bottom: 4px !important;
-    scroll-snap-type: x mandatory !important;
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
-  }
-  .digest-stats-bento::-webkit-scrollbar {
-    display: none !important;
-  }
-  .digest-stat-card {
-    flex: 0 0 70% !important; /* Peeking element effect */
-    scroll-snap-align: start !important;
-    padding: 12px 14px !important;
-    gap: 12px !important;
-    background: var(--bg-glass) !important;
-    border: 1px solid var(--glass-border) !important;
-    border-radius: var(--radius-lg) !important;
-    box-shadow: var(--shadow-sm) !important;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-  }
-  .digest-stat-icon-wrap {
-    width: 32px;
-    height: 32px;
-    border-radius: 10px !important;
-    flex-shrink: 0 !important;
-  }
-  .digest-stat-val {
-    font-size: 18px !important;
-  }
-  .digest-quick-dock {
-    display: flex !important;
-    gap: 8px !important;
-  }
-  .digest-dock-btn {
-    padding: 8px 14px !important;
-    font-size: 13px !important;
-    flex: 1;
-    justify-content: center;
-  }
   .digest-bento-grid {
     display: grid !important;
     grid-template-columns: 1fr !important;
-    gap: 20px !important;
+    gap: 16px !important;
   }
   .digest-bento-column {
     display: flex !important;
     flex-direction: column !important;
-    gap: 20px !important;
+    gap: 16px !important;
   }
 
   /* Segmented column toggling */
@@ -7090,38 +7133,68 @@ mark.find-highlight-active { background: rgba(255, 159, 0, 0.6); border-radius: 
     display: none !important;
   }
 
+  /* Cardless layout for bento widgets */
   .digest-card {
-    padding: 20px 16px !important;
-    border-radius: var(--radius-lg) !important;
-    background: var(--bg-glass) !important;
-    border: 1px solid var(--glass-border) !important;
-    box-shadow: var(--shadow-sm) !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
     display: flex !important;
     flex-direction: column !important;
-    gap: 16px !important;
+    gap: 8px !important;
   }
   .digest-card-title {
-    font-size: 14px !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
     color: var(--text-primary) !important;
-    margin-bottom: 0 !important;
+    margin-bottom: 8px !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
   }
-  .digest-page-row, .digest-task {
-    padding: 8px 10px !important;
-    border-radius: var(--radius-md) !important;
+  
+  /* Reflections productivity tip (Callout box style) */
+  .digest-card.tip-card {
+    background: var(--bg-hover) !important;
+    border: 0.5px solid var(--border-hairline) !important;
+    border-radius: var(--radius-lg) !important;
+    padding: 16px !important;
+    margin-top: 12px !important;
   }
 
-  /* Streamlined Quick Capture Pill Form on Mobile */
+  /* Beautiful Flat List Rows with hairline separators */
+  .digest-page-row, .digest-task {
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 0.5px solid var(--border-hairline) !important;
+    border-radius: 0 !important;
+    padding: 14px 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+  .digest-page-row:last-child, .digest-task:last-child {
+    border-bottom: none !important;
+  }
+
+  /* iOS-style Floating Bottom Capture Pill Bar */
   .premium-draft {
+    position: fixed !important;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 16px !important;
+    right: 16px !important;
+    z-index: 80 !important;
     padding: 6px 6px 6px 16px !important;
     border-radius: 30px !important;
     background: var(--bg-glass) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
     border: 1px solid var(--glass-border) !important;
-    box-shadow: var(--shadow-sm) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
     gap: 8px !important;
-    margin-bottom: 4px !important;
+    margin: 0 !important;
   }
   .premium-draft .digest-card-title,
   .premium-draft .digest-card-sub {

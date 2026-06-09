@@ -254,7 +254,7 @@ export default function App() {
 
     // Home / morning digest — greeting lives in MorningDigest on mobile
     return (
-      <div className="main">
+      <div className="main home-main">
         <MobileScreenHeader title="Home" />
         <div className="page-scroll">
           <MorningDigest />
