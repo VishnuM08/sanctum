@@ -6,7 +6,7 @@ import type { Template, TemplateCategory } from '../data/templates';
 import { TEMPLATE_THUMBS } from './TemplateThumb';
 import { useToast } from './Toast';
 import { NotionIcon } from './NotionIcon';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 
 const gridVariants = {
   hidden: { opacity: 0 },
@@ -172,13 +172,15 @@ export function Templates() {
       </div>
 
       {/* Preview panel */}
-      {preview && (
-        <TemplatePreview
-          template={preview}
-          onClose={() => setPreview(null)}
-          onUse={() => { useTemplate(preview); setPreview(null); }}
-        />
-      )}
+      <AnimatePresence>
+        {preview && (
+          <TemplatePreview
+            template={preview}
+            onClose={() => setPreview(null)}
+            onUse={() => { useTemplate(preview); setPreview(null); }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -255,8 +257,21 @@ function TemplatePreview({ template, onClose, onUse }: {
 }) {
   return (
     <>
-      <div className="template-preview-backdrop" onClick={onClose} />
-      <div className="template-preview-panel">
+      <motion.div
+        className="template-preview-backdrop"
+        onClick={onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+      />
+      <motion.div
+        className="template-preview-panel"
+        initial={{ x: '100%', opacity: 0.9 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: '100%', opacity: 0.9 }}
+        transition={{ type: 'spring', damping: 26, stiffness: 220 }}
+      >
         {/* Header */}
         <div className="template-preview-header">
           <div>
@@ -296,99 +311,129 @@ function TemplatePreview({ template, onClose, onUse }: {
 
           <TemplateContentPreview content={template.content} />
         </div>
-      </div>
+      </motion.div>
     </>
   );
 }
 
-// ── Simplified content preview (renders TipTap JSON as plain text) ──────────
+// ── Rich document preview (renders TipTap JSON recursively) ──────────────────
+
+interface TipTapNode {
+  type: string;
+  attrs?: Record<string, unknown>;
+  content?: TipTapNode[];
+  text?: string;
+  marks?: { type: string; attrs?: Record<string, unknown> }[];
+}
 
 function TemplateContentPreview({ content }: { content: unknown }) {
-  const lines = extractLines(content as { type: string; content?: unknown[]; text?: string; attrs?: Record<string, unknown> });
+  const docNode = content as TipTapNode;
+  
+  if (!docNode || !docNode.content) {
+    return (
+      <div className="template-content-preview">
+        <span style={{ fontStyle: 'italic', color: 'var(--text-faint)' }}>Empty document</span>
+      </div>
+    );
+  }
 
   return (
     <div className="template-content-preview">
-      {lines.slice(0, 20).map((line, i) => (
-        <div key={i} className={`preview-line preview-line-${line.type}`}>
-          {line.prefix && <span className="preview-prefix">{line.prefix}</span>}
-          <span>{line.text}</span>
-        </div>
-      ))}
-      {lines.length > 20 && (
-        <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 8 }}>
-          +{lines.length - 20} more lines…
-        </div>
-      )}
+      {renderContent(docNode.content)}
     </div>
   );
 }
 
-interface PreviewLine { type: string; text: string; prefix?: string }
-
-function extractLines(node: { type: string; content?: unknown[]; text?: string; attrs?: Record<string, unknown> } | null | undefined): PreviewLine[] {
-  if (!node) return [];
-  const lines: PreviewLine[] = [];
-
-  const getText = (n: unknown): string => {
-    const nd = n as { type?: string; text?: string; content?: unknown[] };
-    if (!nd) return '';
-    if (nd.type === 'text') return nd.text ?? '';
-    return (nd.content ?? []).map(getText).join('');
-  };
-
-  const walk = (n: { type: string; content?: unknown[]; text?: string; attrs?: Record<string, unknown> }) => {
-    switch (n.type) {
-      case 'heading': {
-        const level = (n.attrs?.level as number) ?? 1;
-        lines.push({ type: `h${level}`, text: getText(n), prefix: '#'.repeat(level) + ' ' });
-        break;
-      }
-      case 'paragraph': {
-        const t = getText(n);
-        if (t.trim()) lines.push({ type: 'p', text: t });
-        break;
-      }
-      case 'bulletList':
-        (n.content ?? []).forEach((li) => {
-          const nd = li as { type: string; content?: unknown[] };
-          const t = nd.content?.map(getText).join('').trim() ?? '';
-          if (t) lines.push({ type: 'bullet', text: t, prefix: '• ' });
-        });
-        break;
-      case 'orderedList':
-        (n.content ?? []).forEach((li, i) => {
-          const nd = li as { type: string; content?: unknown[] };
-          const t = nd.content?.map(getText).join('').trim() ?? '';
-          if (t) lines.push({ type: 'numbered', text: t, prefix: `${i + 1}. ` });
-        });
-        break;
-      case 'taskList':
-        (n.content ?? []).forEach((li) => {
-          const nd = li as { type: string; content?: unknown[]; attrs?: Record<string, unknown> };
-          const t = nd.content?.map(getText).join('').trim() ?? '';
-          const checked = nd.attrs?.checked;
-          if (t) lines.push({ type: 'todo', text: t, prefix: checked ? '☑ ' : '☐ ' });
-        });
-        break;
-      case 'blockquote': {
-        const t = getText(n);
-        if (t.trim()) lines.push({ type: 'quote', text: t, prefix: '" ' });
-        break;
-      }
-      case 'horizontalRule':
-        lines.push({ type: 'hr', text: '──────────────────' });
-        break;
-      case 'calloutBlock': {
-        const emoji = n.attrs?.emoji as string ?? '💡';
-        const t = getText(n);
-        if (t.trim()) lines.push({ type: 'callout', text: t, prefix: emoji + ' ' });
-        break;
-      }
-      default:
-        (n.content ?? []).forEach((child) => walk(child as { type: string; content?: unknown[]; text?: string; attrs?: Record<string, unknown> }));
+function renderText(node: TipTapNode): React.ReactNode {
+  if (!node.text) return null;
+  if (!node.marks || node.marks.length === 0) {
+    return node.text;
+  }
+  
+  // Wrap text recursively with formats
+  let element: React.ReactNode = node.text;
+  node.marks.forEach((mark) => {
+    if (mark.type === 'bold') {
+      element = <strong key={mark.type}>{element}</strong>;
+    } else if (mark.type === 'italic') {
+      element = <em key={mark.type}>{element}</em>;
+    } else if (mark.type === 'strike') {
+      element = <del key={mark.type}>{element}</del>;
+    } else if (mark.type === 'underline') {
+      element = <span key={mark.type} style={{ textDecoration: 'underline' }}>{element}</span>;
+    } else if (mark.type === 'code') {
+      element = <code key={mark.type} className="editor-code">{element}</code>;
     }
-  };
+  });
+  return element;
+}
 
-  (node.content ?? []).forEach((child) => walk(child as { type: string; content?: unknown[]; text?: string; attrs?: Record<string, unknown> }));
-  return lines;
+function renderContent(nodes?: TipTapNode[]): React.ReactNode {
+  if (!nodes) return null;
+  return nodes.map((node, i) => <NodeRenderer key={i} node={node} />);
+}
+
+function NodeRenderer({ node }: { node: TipTapNode }) {
+  switch (node.type) {
+    case 'text':
+      return <>{renderText(node)}</>;
+    case 'paragraph':
+      return <p className="preview-p">{renderContent(node.content) || '\u00A0'}</p>;
+    case 'heading': {
+      const level = (node.attrs?.level as number) ?? 1;
+      const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+      return <Tag className={`preview-h${level}`}>{renderContent(node.content)}</Tag>;
+    }
+    case 'blockquote':
+      return (
+        <blockquote className="preview-blockquote">
+          {renderContent(node.content)}
+        </blockquote>
+      );
+    case 'horizontalRule':
+      return <hr className="preview-hr" />;
+    case 'bulletList':
+      return <ul className="preview-ul">{renderContent(node.content)}</ul>;
+    case 'orderedList':
+      return <ol className="preview-ol">{renderContent(node.content)}</ol>;
+    case 'listItem':
+      return <li className="preview-li">{renderContent(node.content)}</li>;
+    case 'taskList':
+      return <div className="preview-task-list">{renderContent(node.content)}</div>;
+    case 'taskItem': {
+      const checked = !!node.attrs?.checked;
+      return (
+        <div className="preview-task-item">
+          <span className={`preview-task-checkbox ${checked ? 'checked' : ''}`}>
+            {checked && (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ width: 10, height: 10 }}>
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            )}
+          </span>
+          <div className={`preview-task-content ${checked ? 'completed' : ''}`}>
+            {renderContent(node.content)}
+          </div>
+        </div>
+      );
+    }
+    case 'calloutBlock': {
+      const emoji = (node.attrs?.emoji as string) ?? '💡';
+      return (
+        <div className="callout-block preview-callout-block">
+          <div className="callout-emoji-wrap">
+            <span className="callout-emoji" style={{ cursor: 'default' }}>{emoji}</span>
+          </div>
+          <div className="callout-content preview-callout-content">
+            {renderContent(node.content)}
+          </div>
+        </div>
+      );
+    }
+    default:
+      if (node.content) {
+        return <>{renderContent(node.content)}</>;
+      }
+      return null;
+  }
 }

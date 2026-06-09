@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
 import type {
   Page, Database, Workspace, UserProfile, AppSettings,
@@ -290,6 +290,84 @@ interface StoreState {
 // Track IDs currently being permanently deleted so syncWithBackend won't re-add
 // them from the server while the hard-delete request is still in-flight.
 const permanentlyDeletingIds = new Set<string>();
+
+const safeLocalStorage: StateStorage = {
+  getItem: (key) => {
+    try {
+      return localStorage.getItem(key);
+    } catch (e) {
+      console.error('Failed to read from localStorage', e);
+      return null;
+    }
+  },
+  setItem: (key, value) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch (error: any) {
+      if (
+        error instanceof Error && (
+          error.name === 'QuotaExceededError' ||
+          error.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+          error.code === 22 ||
+          error.code === 1014
+        )
+      ) {
+        console.warn('LocalStorage quota exceeded! Attempting state pruning to prevent crash...');
+        try {
+          const parsed = JSON.parse(value);
+          if (parsed && parsed.state && Array.isArray(parsed.state.pages)) {
+            // PASS 1: Limit snapshot counts to a maximum of 3 per page (free up ~85% of snapshot space)
+            parsed.state.pages = parsed.state.pages.map((p: any) => ({
+              ...p,
+              snapshots: Array.isArray(p.snapshots) ? p.snapshots.slice(0, 3) : [],
+            }));
+            let pruned = JSON.stringify(parsed);
+            try {
+              localStorage.setItem(key, pruned);
+              console.log('Successfully saved pruned state (reduced snapshots count per page to 3).');
+              return;
+            } catch (e1) {
+              // PASS 2: Clear all snapshots completely across all pages
+              parsed.state.pages = parsed.state.pages.map((p: any) => ({
+                ...p,
+                snapshots: [],
+              }));
+              pruned = JSON.stringify(parsed);
+              try {
+                localStorage.setItem(key, pruned);
+                console.log('Successfully saved pruned state (removed all page snapshots).');
+                return;
+              } catch (e2) {
+                // PASS 3: Clear all snapshots AND empty the trash (remove isDeleted pages)
+                parsed.state.pages = parsed.state.pages.filter((p: any) => !p.isDeleted);
+                pruned = JSON.stringify(parsed);
+                try {
+                  localStorage.setItem(key, pruned);
+                  console.log('Successfully saved pruned state (removed snapshots and emptied trash).');
+                  return;
+                } catch (e3) {
+                  // Final catch so editing and sync still work in-memory without throwing uncaught crashes
+                  console.error('Critical: LocalStorage remains full even after comprehensive pruning.', e3);
+                }
+              }
+            }
+          }
+        } catch (parseError) {
+          console.error('Failed to parse store state for pruning', parseError);
+        }
+      } else {
+        console.error('Failed to write to localStorage', error);
+      }
+    }
+  },
+  removeItem: (key) => {
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {
+      console.error('Failed to remove from localStorage', e);
+    }
+  },
+};
 
 export const useStore = create<StoreState>()(
   persist(
@@ -1291,7 +1369,7 @@ export const useStore = create<StoreState>()(
         set((s) => ({
           pages: s.pages.map((p) => p.id === id ? {
             ...p,
-            snapshots: [snap, ...(p.snapshots ?? [])].slice(0, 20),
+            snapshots: [snap, ...(p.snapshots ?? [])].slice(0, 10),
           } : p),
         }));
 
@@ -1618,6 +1696,7 @@ export const useStore = create<StoreState>()(
     }),
     {
       name: 'notebook-2.0-v4',
+      storage: createJSONStorage(() => safeLocalStorage),
       partialize: (state) => {
         const { vaultUnlocked, vaultEntries, searchOpen, inboxOpen, shortcutsOpen, zenMode, savingPages, ...rest } = state;
         void vaultUnlocked; void vaultEntries; void searchOpen;
