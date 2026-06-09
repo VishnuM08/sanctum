@@ -1,6 +1,7 @@
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Settings } from 'lucide-react';
 import { useIsMobile } from '../utils/useIsMobile';
 import { motion, AnimatePresence } from 'motion/react';
+import { useStore } from '../store';
 
 interface Props {
   title: string;
@@ -11,6 +12,8 @@ interface Props {
 
 export function MobileScreenHeader({ title, subtitle, onBack, right }: Props) {
   const isMobile = useIsMobile();
+  const navigateToSettings = useStore((s) => s.navigateToSettings);
+
   if (!isMobile) return null;
 
   return (
@@ -39,7 +42,16 @@ export function MobileScreenHeader({ title, subtitle, onBack, right }: Props) {
         </AnimatePresence>
       </div>
       <div className="mobile-screen-header-trailing">
-        {right ?? <span className="mobile-header-spacer" />}
+        {right !== undefined ? right : (
+          <button
+            type="button"
+            className="mobile-header-btn"
+            onClick={() => navigateToSettings()}
+            aria-label="Settings"
+          >
+            <Settings size={20} />
+          </button>
+        )}
       </div>
     </header>
   );

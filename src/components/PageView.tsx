@@ -3,7 +3,7 @@ import {
   MoreHorizontal, Share2, Star, Maximize2, ChevronRight, ChevronLeft,
   Trash2, Copy, Lock, Unlock, Globe, Type, AlignLeft,
   Link, Download, ExternalLink, History, Search, FileCode,
-  CalendarDays, BookMarked, Menu, Cloud, CloudOff
+  CalendarDays, BookMarked, Menu, Cloud, CloudOff, Settings
 } from 'lucide-react';
 import { useIsMobile } from '../utils/useIsMobile';
 import { useStore } from '../store';
@@ -46,6 +46,7 @@ export function PageView({ pageId }: Props) {
   const isServerOnline = useStore((s) => s.isServerOnline);
   const isAuthenticated = useStore((s) => s.isAuthenticated);
   const { toast }      = useToast();
+  const navigateToSettings = useStore((s) => s.navigateToSettings);
 
   const getSyncIndicator = () => {
     if (!isAuthenticated || !page) return null;
@@ -253,6 +254,7 @@ export function PageView({ pageId }: Props) {
                   onCopyLink={() => { copyToClipboard(window.location.href); toast('Link copied'); setOptionsOpen(false); }}
                   onUpdatePage={updatePage}
                   mobile
+                  onNavigateToSettings={() => { navigateToSettings(); setOptionsOpen(false); }}
                 />
               )}
             </div>
@@ -339,6 +341,7 @@ export function PageView({ pageId }: Props) {
                   }}
                   onCopyLink={() => { copyToClipboard(window.location.href); toast('Link copied'); setOptionsOpen(false); }}
                   onUpdatePage={updatePage}
+                  onNavigateToSettings={() => { navigateToSettings(); setOptionsOpen(false); }}
                 />
               )}
             </div>
@@ -549,12 +552,13 @@ function AutosizeTextarea({ value, placeholder, onChange, onKeyDown, className, 
 
 // ── Options menu ─────────────────────────────────────────────────────────────
 
-function PageOptionsMenu({ page, onClose, onDelete, onFavorite, onDuplicate, onExportMd, onCopyLink, onUpdatePage, onSaveTemplate, onExportHtml, mobile }: {
+function PageOptionsMenu({ page, onClose, onDelete, onFavorite, onDuplicate, onExportMd, onCopyLink, onUpdatePage, onSaveTemplate, onExportHtml, mobile, onNavigateToSettings }: {
   page: Page; onClose: () => void; onDelete: () => void; onFavorite: () => void;
   onDuplicate: () => void; onExportMd: () => void; onCopyLink: () => void;
   onSaveTemplate: () => void; onExportHtml: () => void;
   onUpdatePage: (id: string, patch: Partial<Page>) => void;
   mobile?: boolean;
+  onNavigateToSettings: () => void;
 }) {
   const menuItems = (
     <>
@@ -599,6 +603,10 @@ function PageOptionsMenu({ page, onClose, onDelete, onFavorite, onDuplicate, onE
         <button className="dropdown-item" onClick={() => { onUpdatePage(page.id, { isLocked: !page.isLocked }); onClose(); }}>
           {page.isLocked ? <Unlock size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> : <Lock size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
           {page.isLocked ? 'Unlock page' : 'Lock page'}
+        </button>
+        <div className="dropdown-sep" />
+        <button className="dropdown-item" onClick={onNavigateToSettings}>
+          <Settings size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> App Settings
         </button>
         <div className="dropdown-sep" />
         <button className="dropdown-item danger" onClick={onDelete}>
