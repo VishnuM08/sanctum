@@ -127,6 +127,8 @@ export function MorningDigest() {
   const setSearchOpen     = useStore((s) => s.setSearchOpen);
   const { toast }          = useToast();
 
+  const [activeTab, setActiveTab] = useState<'recent' | 'agenda'>('recent');
+
   const activePages = useMemo(() => pages.filter((p) => !p.isDeleted), [pages]);
 
   // Recent pages (last 5 edited)
@@ -303,15 +305,33 @@ export function MorningDigest() {
         </motion.button>
       </motion.div>
 
+      {/* Quick Capture (Always visible, streamlined pill bar on mobile!) */}
+      <QuickCaptureWidget itemVariants={itemVariants} />
+
+      {/* Mobile-only Segmented Tab Switcher */}
+      <div className="digest-mobile-tabs">
+        <button 
+          className={`digest-tab-btn ${activeTab === 'recent' ? 'active' : ''}`}
+          onClick={() => setActiveTab('recent')}
+        >
+          <Clock size={14} />
+          <span>Recent</span>
+        </button>
+        <button 
+          className={`digest-tab-btn ${activeTab === 'agenda' ? 'active' : ''}`}
+          onClick={() => setActiveTab('agenda')}
+        >
+          <CheckSquare size={14} />
+          <span>Agenda</span>
+        </button>
+      </div>
+
       {/* Bento Grid Panel */}
       <div className="digest-bento-grid">
         
-        {/* Left Column: Quick Draft & Recent Files */}
-        <div className="digest-bento-column">
+        {/* Left Column: Recent Files (conditionally visible on mobile based on active tab) */}
+        <div className={`digest-bento-column ${activeTab === 'recent' ? 'active-mobile-col' : 'hidden-mobile-col'}`}>
           
-          {/* Performance-isolated Quick Capture Widget */}
-          <QuickCaptureWidget itemVariants={itemVariants} />
-
           {/* Recently Edited Card */}
           <motion.div 
             className="digest-card" 
@@ -349,8 +369,8 @@ export function MorningDigest() {
 
         </div>
 
-        {/* Right Column: Upcoming Agenda & Motivation */}
-        <div className="digest-bento-column">
+        {/* Right Column: Upcoming Agenda & Motivation (conditionally visible on mobile based on active tab) */}
+        <div className={`digest-bento-column ${activeTab === 'agenda' ? 'active-mobile-col' : 'hidden-mobile-col'}`}>
           
           {/* Active Agenda Panel */}
           <motion.div 
