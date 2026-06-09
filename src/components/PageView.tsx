@@ -22,6 +22,18 @@ import { copyToClipboard } from '../utils/clipboard';
 import type { Page } from '../types';
 import { format } from 'date-fns';
 
+const stringifyCache = new WeakMap<object, string>();
+
+function getLowercasedContentString(content: any): string {
+  if (!content || typeof content !== 'object') return '';
+  let cached = stringifyCache.get(content);
+  if (cached === undefined) {
+    cached = JSON.stringify(content).toLowerCase();
+    stringifyCache.set(content, cached);
+  }
+  return cached;
+}
+
 interface Props { pageId: string }
 
 export function PageView({ pageId }: Props) {
@@ -161,7 +173,7 @@ export function PageView({ pageId }: Props) {
   const backlinks = page ? allPages.filter((p) => {
     if (p.id === pageId || p.isDeleted || !p.title) return false;
     try {
-      return JSON.stringify(p.content).toLowerCase().includes(page.title.toLowerCase()) && page.title.length > 2;
+      return getLowercasedContentString(p.content).includes(page.title.toLowerCase()) && page.title.length > 2;
     } catch { return false; }
   }) : [];
 

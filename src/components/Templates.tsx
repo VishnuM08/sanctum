@@ -84,6 +84,17 @@ function getTemplateStats(content: any): TemplateStats {
   };
 }
 
+const statsCache = new Map<string, TemplateStats>();
+
+function getTemplateStatsCached(template: Template): TemplateStats {
+  let stats = statsCache.get(template.id);
+  if (!stats) {
+    stats = getTemplateStats(template.content);
+    statsCache.set(template.id, stats);
+  }
+  return stats;
+}
+
 export function Templates() {
   const createPage     = useStore((s) => s.createPage);
   const updatePage     = useStore((s) => s.updatePage);
@@ -218,9 +229,9 @@ export function Templates() {
               {(category !== 'All' || search) && (
                 <motion.div 
                   className="template-grid"
-                  variants={gridVariants}
-                  initial="hidden"
-                  animate="visible"
+                  variants={search ? undefined : gridVariants}
+                  initial={search ? undefined : "hidden"}
+                  animate={search ? undefined : "visible"}
                 >
                   {filtered.map((t) => (
                     <TemplateCard
@@ -228,6 +239,7 @@ export function Templates() {
                       template={t}
                       onPreview={() => setPreview(t)}
                       onUse={() => useTemplate(t)}
+                      animate={!search}
                     />
                   ))}
                 </motion.div>
@@ -253,18 +265,19 @@ export function Templates() {
 
 // ── Template card ──────────────────────────────────────────────────────────────
 
-function TemplateCard({ template, onPreview, onUse }: {
+function TemplateCard({ template, onPreview, onUse, animate = true }: {
   template: Template;
   onPreview: () => void;
   onUse: () => void;
+  animate?: boolean;
 }) {
-  const stats = getTemplateStats(template.content);
+  const stats = getTemplateStatsCached(template);
 
   return (
     <motion.div
       className="template-card"
       onClick={onPreview}
-      variants={cardVariants}
+      variants={animate ? cardVariants : undefined}
     >
       {/* Cover — SVG document preview over gradient */}
       <div
@@ -323,7 +336,7 @@ function TemplatePreview({ template, onClose, onUse }: {
   onClose: () => void;
   onUse: () => void;
 }) {
-  const stats = getTemplateStats(template.content);
+  const stats = getTemplateStatsCached(template);
 
   return (
     <>

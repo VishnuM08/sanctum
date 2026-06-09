@@ -28,13 +28,25 @@ export function SearchModal({ onClose }: Props) {
     .sort((a, b) => b.updatedAt - a.updatedAt)
     .slice(0, 8);
 
+const stringifyCache = new WeakMap<object, string>();
+
+function getLowercasedContentString(content: any): string {
+  if (!content || typeof content !== 'object') return '';
+  let cached = stringifyCache.get(content);
+  if (cached === undefined) {
+    cached = JSON.stringify(content).toLowerCase();
+    stringifyCache.set(content, cached);
+  }
+  return cached;
+}
+
   // Filtered results
   const q = query.trim().toLowerCase();
   const filteredPages: Page[] = q
     ? activePages.filter(
         (p) =>
           p.title.toLowerCase().includes(q) ||
-          (typeof p.content === 'object' && JSON.stringify(p.content).toLowerCase().includes(q)),
+          getLowercasedContentString(p.content).includes(q),
       ).slice(0, 15)
     : [];
 
